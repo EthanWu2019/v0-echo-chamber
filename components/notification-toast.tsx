@@ -24,15 +24,16 @@ export function NotificationToast({ notifications, onDismiss }: NotificationToas
               initial={{ opacity: 0, x: 100, scale: 0.9 }}
               animate={{ 
                 opacity: 1, 
-                x: 0, 
+                x: isNegative ? [0, -3, 3, -2, 2, 0] : 0, 
                 scale: 1,
-                ...(isNegative && { x: [0, -3, 3, -2, 2, 0] })
               }}
               exit={{ opacity: 0, x: 100, scale: 0.9 }}
               transition={{ 
-                type: "spring", 
-                damping: 20,
-                delay: index * 0.1
+                opacity: { type: "spring", damping: 20, delay: index * 0.1 },
+                scale: { type: "spring", damping: 20, delay: index * 0.1 },
+                x: isNegative 
+                  ? { duration: 0.4, ease: "easeInOut", delay: index * 0.1 }
+                  : { type: "spring", damping: 20, delay: index * 0.1 }
               }}
               className={`bg-card border rounded-xl p-3 shadow-lg ${
                 isNegative ? "border-red-500/50" : "border-border"
