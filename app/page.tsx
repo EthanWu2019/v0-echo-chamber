@@ -8,12 +8,45 @@ import { PostCard } from "@/components/post-card"
 import { SentimentWidget } from "@/components/sentiment-widget"
 import { TrendingWidget } from "@/components/trending-widget"
 import { NotificationToast } from "@/components/notification-toast"
-import { generateAIComments, generateTargetedReply } from "@/lib/mock-ai"
 import type { Post, Comment, AICommentResponse } from "@/lib/types"
 import { PERSONALITY_CONFIG } from "@/lib/types"
 
 // Helper to generate unique IDs
 const generateId = () => Math.random().toString(36).substring(2, 9)
+
+// Call DeepSeek API to generate comments
+async function fetchAIComments(
+  postContent: string,
+  isReply = false,
+  replyToContent = ""
+): Promise<AICommentResponse[]> {
+  try {
+    const response = await fetch("/api/generate-comments", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ postContent, isReply, replyToContent }),
+    })
+
+    if (!response.ok) {
+      throw new Error("API request failed")
+    }
+
+    const data = await response.json()
+    return data.comments || []
+  } catch (error) {
+    console.error("[v0] Failed to fetch AI comments:", error)
+    // Fallback comment
+    return [
+      {
+        username: "系统提示",
+        personality: "troll" as const,
+        content: "评论加载失败，请重试",
+        sentiment_impact: 0,
+        delay: 0,
+      },
+    ]
+  }
+}
 
 // Convert API response to Comment object
 const responseToComment = (res: AICommentResponse): Comment => ({
@@ -67,9 +100,9 @@ export default function EchoChamberPage() {
 
     setPosts(prev => [newPost, ...prev])
 
-    // Generate AI comments
+    // Generate AI comments via DeepSeek API
     try {
-      const aiResponses = await generateAIComments(content, 4 + Math.floor(Math.random() * 3))
+      const aiResponses = await fetchAIComments(content)
       
       // Add comments one by one with delays
       for (let i = 0; i < aiResponses.length; i++) {
@@ -165,7 +198,9 @@ export default function EchoChamberPage() {
       .find(c => c.id === commentId)
 
     if (originalComment) {
-      const response = await generateTargetedReply(originalComment.content, content)
+      const responses = await fetchAIComments(content, true, originalComment.content)
+      const response = responses[0]
+      if (!response) return
       const aiReply = responseToComment(response)
 
       await new Promise(resolve => setTimeout(resolve, response.delay * 1000))
