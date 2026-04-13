@@ -49,17 +49,20 @@ async function fetchAIComments(
 }
 
 // Convert API response to Comment object
-const responseToComment = (res: AICommentResponse): Comment => ({
-  id: generateId(),
-  username: res.username,
-  personality: res.personality,
-  personalityLabel: PERSONALITY_CONFIG[res.personality].label,
-  content: res.content,
-  sentimentImpact: res.sentiment_impact,
-  likes: Math.floor(Math.random() * 50),
-  timestamp: new Date(),
-  replies: [],
-})
+const responseToComment = (res: AICommentResponse): Comment => {
+  const config = PERSONALITY_CONFIG[res.personality] || PERSONALITY_CONFIG.hater
+  return {
+    id: generateId(),
+    username: res.username,
+    personality: res.personality in PERSONALITY_CONFIG ? res.personality : "hater",
+    personalityLabel: config.label,
+    content: res.content,
+    sentimentImpact: res.sentiment_impact,
+    likes: Math.floor(Math.random() * 50),
+    timestamp: new Date(),
+    replies: [],
+  }
+}
 
 export default function EchoChamberPage() {
   const [posts, setPosts] = useState<Post[]>([])
