@@ -61,7 +61,7 @@ async function fetchAIComments(
   }
 }
 
-// Calculate account stats
+// Calculate account stats - deterministic calculation to avoid hydration mismatch
 function calculateAccountStats(
   posts: Post[], 
   sentiment: number, 
@@ -71,14 +71,16 @@ function calculateAccountStats(
     sum + p.comments.filter(c => !c.isTyping).length, 0
   )
   
-  const baseFollowers = posts.length * (15 + Math.floor(Math.random() * 10))
+  // Use deterministic values instead of Math.random()
+  const baseFollowers = posts.length * 20
   const interactionBonus = Math.floor(totalComments * 2.5)
   const followers = baseFollowers + interactionBonus
 
   const haterRatio = Math.max(0.1, (100 - sentiment) / 100 * 0.6)
   const haters = Math.floor(followers * haterRatio)
 
-  const reputation = Math.max(0, Math.min(100, sentiment + Math.floor(Math.random() * 10) - 5))
+  // Reputation directly tied to sentiment
+  const reputation = Math.max(0, Math.min(100, sentiment))
 
   const controversy = Math.min(100, Math.floor(totalNegativeComments * 8 + (100 - sentiment) * 0.3))
 
@@ -94,7 +96,7 @@ function calculateAccountStats(
 
   return {
     followers,
-    following: Math.floor(Math.random() * 50) + 10,
+    following: 25, // Fixed value
     haters,
     totalPosts: posts.length,
     totalLikes,
