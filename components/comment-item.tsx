@@ -1,10 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
-import { Heart, MessageCircle, MoreHorizontal } from "lucide-react"
-import type { Comment, PersonalityType } from "@/lib/types"
-import { PERSONALITY_CONFIG } from "@/lib/types"
+import { Heart, MessageCircle, MoreHorizontal, Repeat2 } from "lucide-react"
+import type { Comment } from "@/lib/types"
+import { PERSONALITY_CONFIG, getAvatarInitials } from "@/lib/types"
 import { formatDistanceToNow } from "date-fns"
 import { zhCN } from "date-fns/locale"
 
@@ -12,16 +12,44 @@ interface CommentItemProps {
   comment: Comment
   onReply: (commentId: string, content: string) => void
   depth?: number
+  isReplying?: boolean
 }
 
-export function CommentItem({ comment, onReply, depth = 0 }: CommentItemProps) {
+export function CommentItem({ comment, onReply, depth = 0, isReplying = false }: CommentItemProps) {
   const [showReplyInput, setShowReplyInput] = useState(false)
   const [replyContent, setReplyContent] = useState("")
-  const [liked, setLiked] = useState(false)
+  const [liked, setLiked] = useState(comment.likedByUser || false)
   const [likeCount, setLikeCount] = useState(comment.likes)
+  const [repostCount, setRepostCount] = useState(comment.reposts || 0)
 
-  const config = PERSONALITY_CONFIG[comment.personality]
+  const config = PERSONALITY_CONFIG[comment.personality] || PERSONALITY_CONFIG.hater
   const isNegative = comment.sentimentImpact < 0
+  const initials = getAvatarInitials(comment.username)
+
+  // 模拟数据增长
+  useEffect(() => {
+    if (comment.isTyping) return
+    
+    // 随机增长点赞和转发
+    const growthInterval = setInterval(() => {
+      if (Math.random() < 0.1) { // 10% 概率增长
+        setLikeCount(prev => prev + Math.floor(Math.random() * 3))
+      }
+      if (Math.random() < 0.05) { // 5% 概率增长转发
+        setRepostCount(prev => prev + 1)
+      }
+    }, 5000)
+
+    // 30秒后停止增长
+    const stopTimer = setTimeout(() => {
+      clearInterval(growthInterval)
+    }, 30000)
+
+    return () => {
+      clearInterval(growthInterval)
+      clearTimeout(stopTimer)
+    }
+  }, [comment.isTyping])
 
   const handleReply = () => {
     if (replyContent.trim()) {
@@ -32,7 +60,10 @@ export function CommentItem({ comment, onReply, depth = 0 }: CommentItemProps) {
   }
 
   const handleLike = () => {
-    if (!liked) {
+    if (liked) {
+      setLiked(false)
+      setLikeCount(prev => Math.max(0, prev - 1))
+    } else {
       setLiked(true)
       setLikeCount(prev => prev + 1)
     }
@@ -42,12 +73,14 @@ export function CommentItem({ comment, onReply, depth = 0 }: CommentItemProps) {
     <motion.div
       initial={{ opacity: 0, x: isNegative ? -20 : 0, y: 10 }}
       animate={{ opacity: 1, x: 0, y: 0 }}
-      className={`${depth > 0 ? "ml-8 pl-4 border-l-2 border-border" : ""} mb-1`}
+      className={`${depth > 0 ? "ml-8 pl-4 border-l-2 border-border" : ""} mb-2`}
     >
       {/* Typing indicator */}
       {comment.isTyping ? (
         <div className="flex items-center gap-2 py-3">
-          <div className="w-8 h-8 rounded-full bg-secondary shrink-0" />
+          <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${config.avatarGradient} shrink-0 flex items-center justify-center`}>
+            <span className="text-white text-xs font-bold">?</span>
+          </div>
           <div className="flex gap-1">
             {[0, 1, 2].map((i) => (
               <motion.div
@@ -67,16 +100,12 @@ export function CommentItem({ comment, onReply, depth = 0 }: CommentItemProps) {
           transition={{ duration: 0.3 }}
         >
           <div className="flex gap-3 relative">
-            {/* Avatar */}
+            {/* Avatar with initials */}
             <div 
-              className={`w-8 h-8 rounded-full shrink-0 ${
-                comment.personality === "spam-bot" 
-                  ? "bg-gradient-to-br from-green-400 to-blue-500"
-                  : comment.personality === "stan"
-                  ? "bg-gradient-to-br from-pink-400 to-purple-500"
-                  : "bg-gradient-to-br from-gray-600 to-gray-700"
-              }`}
-            />
+              className={`w-8 h-8 rounded-full shrink-0 bg-gradient-to-br ${config.avatarGradient} flex items-center justify-center`}
+            >
+              <span className="text-white text-xs font-bold">{initials}</span>
+            </div>
 
             <div className="flex-1 min-w-0">
               {/* Header */}
@@ -109,6 +138,10 @@ export function CommentItem({ comment, onReply, depth = 0 }: CommentItemProps) {
                 >
                   <Heart className={`w-4 h-4 ${liked ? "fill-current" : ""}`} />
                   <span>{likeCount}</span>
+                </button>
+                <button className="flex items-center gap-1 text-xs text-muted-foreground hover:text-green-400 transition-colors">
+                  <Repeat2 className="w-4 h-4" />
+                  <span>{repostCount}</span>
                 </button>
                 {depth < 2 && (
                   <button 
@@ -149,9 +182,30 @@ export function CommentItem({ comment, onReply, depth = 0 }: CommentItemProps) {
                 </motion.div>
               )}
 
+              {/* Replying indicator for nested replies */}
+              {isReplying && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="mt-3 flex items-center gap-2 text-sm text-muted-foreground"
+                >
+                  <div className="flex gap-1">
+                    {[0, 1, 2].map((i) => (
+                      <motion.div
+                        key={i}
+                        className="w-1.5 h-1.5 bg-muted-foreground rounded-full"
+                        animate={{ y: [0, -4, 0] }}
+                        transition={{ duration: 0.5, repeat: Infinity, delay: i * 0.1 }}
+                      />
+                    ))}
+                  </div>
+                  <span>对方正在回复...</span>
+                </motion.div>
+              )}
+
               {/* Nested Replies */}
               {comment.replies.length > 0 && (
-                <div className="mt-3 space-y-1">
+                <div className="mt-3 space-y-2">
                   {comment.replies.map((reply) => (
                     <CommentItem
                       key={reply.id}

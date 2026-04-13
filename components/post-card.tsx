@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Heart, MessageCircle, Repeat2, Share, ChevronDown, ChevronUp } from "lucide-react"
+import { Heart, MessageCircle, Repeat2, Share, ChevronDown, ChevronUp, Eye } from "lucide-react"
 import type { Post } from "@/lib/types"
 import { CommentItem } from "./comment-item"
 import { formatDistanceToNow } from "date-fns"
@@ -11,18 +11,44 @@ import { zhCN } from "date-fns/locale"
 interface PostCardProps {
   post: Post
   onReplyToComment: (postId: string, commentId: string, content: string) => void
+  replyingCommentIds?: Set<string>
 }
 
-export function PostCard({ post, onReplyToComment }: PostCardProps) {
+export function PostCard({ post, onReplyToComment, replyingCommentIds = new Set() }: PostCardProps) {
   const [expanded, setExpanded] = useState(true)
   const [liked, setLiked] = useState(false)
+  const [likeCount, setLikeCount] = useState(post.likes)
+  const [repostCount, setRepostCount] = useState(post.reposts)
+  const [viewCount, setViewCount] = useState(post.views)
+
+  // 同步外部数据变化
+  useEffect(() => {
+    setLikeCount(post.likes)
+    setRepostCount(post.reposts)
+    setViewCount(post.views)
+  }, [post.likes, post.reposts, post.views])
 
   const handleReply = (commentId: string, content: string) => {
     onReplyToComment(post.id, commentId, content)
   }
 
+  const handleLike = () => {
+    if (liked) {
+      setLiked(false)
+      setLikeCount(prev => Math.max(0, prev - 1))
+    } else {
+      setLiked(true)
+      setLikeCount(prev => prev + 1)
+    }
+  }
+
   const negativeComments = post.comments.filter(c => c.sentimentImpact < 0 && !c.isTyping)
   const hasNegativeVibes = negativeComments.length >= 2
+
+  // 检查某个评论是否正在被回复
+  const isCommentReplying = (commentId: string): boolean => {
+    return replyingCommentIds.has(commentId)
+  }
 
   return (
     <motion.article
@@ -35,7 +61,9 @@ export function PostCard({ post, onReplyToComment }: PostCardProps) {
       {/* Post Header */}
       <div className="p-4">
         <div className="flex gap-3">
-          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 shrink-0" />
+          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 shrink-0 flex items-center justify-center">
+            <span className="text-white text-lg font-bold">U</span>
+          </div>
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <span className="font-semibold text-foreground">我</span>
@@ -62,17 +90,42 @@ export function PostCard({ post, onReplyToComment }: PostCardProps) {
           </button>
           <button className="flex items-center gap-2 text-muted-foreground hover:text-green-400 transition-colors">
             <Repeat2 className="w-5 h-5" />
-            <span className="text-sm">{post.reposts}</span>
+            <motion.span 
+              key={repostCount}
+              initial={{ scale: 1.2 }}
+              animate={{ scale: 1 }}
+              className="text-sm"
+            >
+              {repostCount}
+            </motion.span>
           </button>
           <button 
-            onClick={() => setLiked(!liked)}
+            onClick={handleLike}
             className={`flex items-center gap-2 transition-colors ${
               liked ? "text-red-400" : "text-muted-foreground hover:text-red-400"
             }`}
           >
             <Heart className={`w-5 h-5 ${liked ? "fill-current" : ""}`} />
-            <span className="text-sm">{post.likes + (liked ? 1 : 0)}</span>
+            <motion.span 
+              key={likeCount}
+              initial={{ scale: 1.2 }}
+              animate={{ scale: 1 }}
+              className="text-sm"
+            >
+              {likeCount}
+            </motion.span>
           </button>
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Eye className="w-5 h-5" />
+            <motion.span 
+              key={viewCount}
+              initial={{ scale: 1.1 }}
+              animate={{ scale: 1 }}
+              className="text-sm"
+            >
+              {viewCount}
+            </motion.span>
+          </div>
           <button className="text-muted-foreground hover:text-foreground transition-colors">
             <Share className="w-5 h-5" />
           </button>
@@ -88,7 +141,7 @@ export function PostCard({ post, onReplyToComment }: PostCardProps) {
             exit={{ height: 0, opacity: 0 }}
             className="border-t border-border"
           >
-            <div className="p-4 space-y-1">
+            <div className="p-4 space-y-2">
               {/* Generating indicator */}
               {post.isGenerating && (
                 <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
@@ -106,6 +159,7 @@ export function PostCard({ post, onReplyToComment }: PostCardProps) {
                   key={comment.id}
                   comment={comment}
                   onReply={handleReply}
+                  isReplying={isCommentReplying(comment.id)}
                 />
               ))}
             </div>

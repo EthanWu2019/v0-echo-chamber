@@ -8,8 +8,10 @@ import { PostCard } from "@/components/post-card"
 import { SentimentWidget } from "@/components/sentiment-widget"
 import { TrendingWidget } from "@/components/trending-widget"
 import { NotificationToast } from "@/components/notification-toast"
-import type { Post, Comment, AICommentResponse } from "@/lib/types"
-import { PERSONALITY_CONFIG } from "@/lib/types"
+import { ScrollToTop } from "@/components/scroll-to-top"
+import { AccountWidget } from "@/components/account-widget"
+import type { Post, Comment, AICommentResponse, AccountStats } from "@/lib/types"
+import { PERSONALITY_CONFIG, getAvatarInitials } from "@/lib/types"
 
 // Helper to generate unique IDs
 const generateId = () => Math.random().toString(36).substring(2, 9)
@@ -18,13 +20,21 @@ const generateId = () => Math.random().toString(36).substring(2, 9)
 async function fetchAIComments(
   postContent: string,
   isReply = false,
-  replyToContent = ""
+  replyToContent = "",
+  originalPostContent = "",
+  userReplyContent = ""
 ): Promise<AICommentResponse[]> {
   try {
     const response = await fetch("/api/generate-comments", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ postContent, isReply, replyToContent }),
+      body: JSON.stringify({ 
+        postContent, 
+        isReply, 
+        replyToContent,
+        originalPostContent,
+        userReplyContent
+      }),
     })
 
     if (!response.ok) {
@@ -35,11 +45,10 @@ async function fetchAIComments(
     return data.comments || []
   } catch (error) {
     console.error("[v0] Failed to fetch AI comments:", error)
-    // Fallback comment
     return [
       {
         username: "系统提示",
-        personality: "troll" as const,
+        personality: "hater" as const,
         content: "评论加载失败，请重试",
         sentiment_impact: 0,
         delay: 0,
@@ -54,13 +63,64 @@ const responseToComment = (res: AICommentResponse): Comment => {
   return {
     id: generateId(),
     username: res.username,
+    avatar: getAvatarInitials(res.username),
     personality: res.personality in PERSONALITY_CONFIG ? res.personality : "hater",
     personalityLabel: config.label,
     content: res.content,
     sentimentImpact: res.sentiment_impact,
     likes: Math.floor(Math.random() * 50),
+    reposts: Math.floor(Math.random() * 10),
     timestamp: new Date(),
     replies: [],
+  }
+}
+
+// 计算账号数据
+function calculateAccountStats(
+  posts: Post[], 
+  sentiment: number, 
+  totalNegativeComments: number
+): AccountStats {
+  const totalComments = posts.reduce((sum, p) => 
+    sum + p.comments.filter(c => !c.isTyping).length, 0
+  )
+  
+  // 基础粉丝 = 帖子数 * 随机系数 + 评论互动带来的曝光
+  const baseFollowers = posts.length * (15 + Math.floor(Math.random() * 10))
+  const interactionBonus = Math.floor(totalComments * 2.5)
+  const followers = baseFollowers + interactionBonus
+
+  // 黑粉比例与好感度负相关
+  const haterRatio = Math.max(0.1, (100 - sentiment) / 100 * 0.6)
+  const haters = Math.floor(followers * haterRatio)
+
+  // 声誉值主要由好感度决定
+  const reputation = Math.max(0, Math.min(100, sentiment + Math.floor(Math.random() * 10) - 5))
+
+  // 争议度：负面评论越多越争议
+  const controversy = Math.min(100, Math.floor(totalNegativeComments * 8 + (100 - sentiment) * 0.3))
+
+  // 影响力：发帖多、互动多则影响力大
+  const influence = Math.min(100, Math.floor(
+    posts.length * 10 + totalComments * 2 + followers * 0.05
+  ))
+
+  // 总获赞
+  const totalLikes = posts.reduce((sum, p) => {
+    const postLikes = p.likes
+    const commentLikes = p.comments.reduce((cSum, c) => cSum + c.likes, 0)
+    return sum + postLikes + commentLikes
+  }, 0)
+
+  return {
+    followers,
+    following: Math.floor(Math.random() * 50) + 10,
+    haters,
+    totalPosts: posts.length,
+    totalLikes,
+    reputation,
+    controversy,
+    influence,
   }
 }
 
@@ -73,10 +133,37 @@ export default function EchoChamberPage() {
   const [isPosting, setIsPosting] = useState(false)
   const [isLowSentiment, setIsLowSentiment] = useState(false)
   const [activeNav, setActiveNav] = useState("首页")
+  const [totalNegativeComments, setTotalNegativeComments] = useState(0)
+  const [replyingCommentIds, setReplyingCommentIds] = useState<Set<string>>(new Set())
+
+  // 计算账号数据
+  const accountStats = calculateAccountStats(posts, sentiment, totalNegativeComments)
 
   // Update screen effects based on sentiment
   useEffect(() => {
     setIsLowSentiment(sentiment < 30)
+  }, [sentiment])
+
+  // 模拟帖子数据增长
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPosts(prev => prev.map(post => {
+        // 只对不在生成中的帖子增长数据
+        if (post.isGenerating) return post
+        
+        // 根据好感度决定增长速度
+        const growthMultiplier = sentiment > 50 ? 1.5 : 0.5
+        
+        return {
+          ...post,
+          likes: post.likes + (Math.random() < 0.15 ? Math.floor(Math.random() * 3 * growthMultiplier) : 0),
+          reposts: post.reposts + (Math.random() < 0.05 ? 1 : 0),
+          views: post.views + Math.floor(Math.random() * 10 * growthMultiplier),
+        }
+      }))
+    }, 3000)
+
+    return () => clearInterval(interval)
   }, [sentiment])
 
   // Handle sentiment change
@@ -86,6 +173,9 @@ export default function EchoChamberPage() {
       setSentimentTrend(impact > 0 ? "up" : impact < 0 ? "down" : "stable")
       return newValue
     })
+    if (impact < 0) {
+      setTotalNegativeComments(prev => prev + 1)
+    }
   }, [])
 
   // Handle new post
@@ -96,8 +186,9 @@ export default function EchoChamberPage() {
       id: generateId(),
       content,
       timestamp: new Date(),
-      likes: 0,
+      likes: Math.floor(Math.random() * 5),
       reposts: 0,
+      views: Math.floor(Math.random() * 50) + 10,
       comments: [],
       isGenerating: true,
     }
@@ -125,7 +216,7 @@ export default function EchoChamberPage() {
         }))
 
         // Wait for the delay
-        await new Promise(resolve => setTimeout(resolve, response.delay * 1000))
+        await new Promise(resolve => setTimeout(resolve, (response.delay + 0.5) * 1000))
 
         // Replace typing with actual comment
         const comment = responseToComment(response)
@@ -161,6 +252,11 @@ export default function EchoChamberPage() {
     }
   }, [handleSentimentChange])
 
+  // Handle reply to comment - 获取帖子原文用于上下文
+  const getPostContent = useCallback((postId: string) => {
+    return posts.find(p => p.id === postId)?.content || ""
+  }, [posts])
+
   // Handle reply to comment
   const handleReplyToComment = useCallback(async (
     postId: string,
@@ -171,18 +267,33 @@ export default function EchoChamberPage() {
     const userReply: Comment = {
       id: generateId(),
       username: "我",
+      avatar: "我",
       personality: "stan",
       personalityLabel: "",
       content,
       sentimentImpact: 0,
       likes: 0,
+      reposts: 0,
       timestamp: new Date(),
       replies: [],
     }
 
+    // Find the original comment
+    const findComment = (comments: Comment[], id: string): Comment | undefined => {
+      for (const c of comments) {
+        if (c.id === id) return c
+        const found = findComment(c.replies, id)
+        if (found) return found
+      }
+      return undefined
+    }
+
+    const post = posts.find(p => p.id === postId)
+    const originalComment = post ? findComment(post.comments, commentId) : undefined
+
     // Find and update the comment
-    setPosts(prev => prev.map(post => {
-      if (post.id !== postId) return post
+    setPosts(prev => prev.map(p => {
+      if (p.id !== postId) return p
       
       const updateReplies = (comments: Comment[]): Comment[] => {
         return comments.map(comment => {
@@ -193,24 +304,43 @@ export default function EchoChamberPage() {
         })
       }
 
-      return { ...post, comments: updateReplies(post.comments) }
+      return { ...p, comments: updateReplies(p.comments) }
     }))
 
-    // Generate targeted response
-    const originalComment = posts
-      .find(p => p.id === postId)?.comments
-      .find(c => c.id === commentId)
+    // Show typing indicator
+    setReplyingCommentIds(prev => new Set(prev).add(commentId))
 
     if (originalComment) {
-      const responses = await fetchAIComments(content, true, originalComment.content)
+      const originalPostContent = getPostContent(postId)
+      const responses = await fetchAIComments(
+        content, 
+        true, 
+        originalComment.content,
+        originalPostContent,
+        content
+      )
       const response = responses[0]
-      if (!response) return
+      if (!response) {
+        setReplyingCommentIds(prev => {
+          const next = new Set(prev)
+          next.delete(commentId)
+          return next
+        })
+        return
+      }
       const aiReply = responseToComment(response)
 
-      await new Promise(resolve => setTimeout(resolve, response.delay * 1000))
+      await new Promise(resolve => setTimeout(resolve, (response.delay + 1) * 1000))
 
-      setPosts(prev => prev.map(post => {
-        if (post.id !== postId) return post
+      // Remove typing indicator
+      setReplyingCommentIds(prev => {
+        const next = new Set(prev)
+        next.delete(commentId)
+        return next
+      })
+
+      setPosts(prev => prev.map(p => {
+        if (p.id !== postId) return p
         
         const updateReplies = (comments: Comment[]): Comment[] => {
           return comments.map(comment => {
@@ -221,7 +351,7 @@ export default function EchoChamberPage() {
           })
         }
 
-        return { ...post, comments: updateReplies(post.comments) }
+        return { ...p, comments: updateReplies(p.comments) }
       }))
 
       handleSentimentChange(response.sentiment_impact)
@@ -231,7 +361,7 @@ export default function EchoChamberPage() {
         setNotificationCount(prev => prev + 1)
       }
     }
-  }, [posts, handleSentimentChange])
+  }, [posts, handleSentimentChange, getPostContent])
 
   // Dismiss notification
   const dismissNotification = useCallback((id: string) => {
@@ -269,12 +399,17 @@ export default function EchoChamberPage() {
         onDismiss={dismissNotification}
       />
 
-      {/* Sidebar */}
-      <Sidebar 
-        notificationCount={notificationCount} 
-        onNavClick={handleNavClick}
-        activeNav={activeNav}
-      />
+      {/* Scroll to Top */}
+      <ScrollToTop />
+
+      {/* Sidebar - sticky */}
+      <div className="fixed left-0 top-0 h-screen">
+        <Sidebar 
+          notificationCount={notificationCount} 
+          onNavClick={handleNavClick}
+          activeNav={activeNav}
+        />
+      </div>
 
       {/* Main Content */}
       <main className="ml-64 mr-80">
@@ -303,6 +438,7 @@ export default function EchoChamberPage() {
                       key={post.id}
                       post={post}
                       onReplyToComment={handleReplyToComment}
+                      replyingCommentIds={replyingCommentIds}
                     />
                   ))}
                 </AnimatePresence>
@@ -345,6 +481,7 @@ export default function EchoChamberPage() {
                 <AnimatePresence>
                   {notifications.map((notification) => {
                     const isNegative = notification.sentimentImpact < 0
+                    const config = PERSONALITY_CONFIG[notification.personality] || PERSONALITY_CONFIG.hater
                     return (
                       <motion.div
                         key={notification.id}
@@ -356,11 +493,11 @@ export default function EchoChamberPage() {
                         }`}
                       >
                         <div className="flex items-start gap-3">
-                          <div className={`w-10 h-10 rounded-full shrink-0 ${
-                            isNegative 
-                              ? "bg-gradient-to-br from-red-500 to-orange-500" 
-                              : "bg-gradient-to-br from-blue-500 to-purple-500"
-                          }`} />
+                          <div className={`w-10 h-10 rounded-full shrink-0 bg-gradient-to-br ${config.avatarGradient} flex items-center justify-center`}>
+                            <span className="text-white text-sm font-bold">
+                              {getAvatarInitials(notification.username)}
+                            </span>
+                          </div>
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
                               <span className={`font-medium ${isNegative ? "text-red-300" : "text-foreground"}`}>
@@ -391,7 +528,9 @@ export default function EchoChamberPage() {
               {/* Profile Header */}
               <div className="bg-card border border-border rounded-2xl p-6">
                 <div className="flex items-center gap-4">
-                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-purple-500" />
+                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
+                    <span className="text-white text-2xl font-bold">U</span>
+                  </div>
                   <div>
                     <h2 className="text-xl font-bold text-foreground">模拟用户</h2>
                     <p className="text-muted-foreground">@simulated_user</p>
@@ -406,11 +545,11 @@ export default function EchoChamberPage() {
                     <span className="text-muted-foreground ml-1">动态</span>
                   </div>
                   <div>
-                    <span className="font-bold text-foreground">0</span>
+                    <span className="font-bold text-foreground">{accountStats.following}</span>
                     <span className="text-muted-foreground ml-1">关注</span>
                   </div>
                   <div>
-                    <span className="font-bold text-foreground">0</span>
+                    <span className="font-bold text-foreground">{accountStats.followers}</span>
                     <span className="text-muted-foreground ml-1">粉丝</span>
                   </div>
                 </div>
@@ -430,6 +569,7 @@ export default function EchoChamberPage() {
                         key={post.id}
                         post={post}
                         onReplyToComment={handleReplyToComment}
+                        replyingCommentIds={replyingCommentIds}
                       />
                     ))}
                   </div>
@@ -440,34 +580,12 @@ export default function EchoChamberPage() {
         </div>
       </main>
 
-      {/* Right Sidebar */}
-      <aside className="fixed right-0 top-0 h-screen w-80 border-l border-border bg-card p-6 space-y-6 overflow-y-auto">
-        <SentimentWidget sentiment={sentiment} trend={sentimentTrend} />
-        <TrendingWidget />
-        
-        {/* Stats */}
-        <div className="bg-secondary/50 rounded-2xl p-4">
-          <h3 className="font-semibold text-foreground mb-3">统计数据</h3>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">发布动态</span>
-              <span className="text-foreground font-medium">{posts.length}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">收到评论</span>
-              <span className="text-foreground font-medium">
-                {posts.reduce((sum, p) => sum + p.comments.filter(c => !c.isTyping).length, 0)}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">负面评论</span>
-              <span className="text-red-400 font-medium">
-                {posts.reduce((sum, p) => 
-                  sum + p.comments.filter(c => c.sentimentImpact < 0 && !c.isTyping).length, 0
-                )}
-              </span>
-            </div>
-          </div>
+      {/* Right Sidebar - sticky */}
+      <aside className="fixed right-0 top-0 h-screen w-80 border-l border-border bg-card overflow-y-auto">
+        <div className="p-6 space-y-6">
+          <SentimentWidget sentiment={sentiment} trend={sentimentTrend} />
+          <AccountWidget stats={accountStats} />
+          <TrendingWidget />
         </div>
       </aside>
     </div>
