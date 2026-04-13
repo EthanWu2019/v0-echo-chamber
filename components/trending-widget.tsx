@@ -2,25 +2,22 @@
 
 import { motion } from "framer-motion"
 import { TrendingUp, Flame } from "lucide-react"
+import type { Translations } from "@/lib/i18n"
 
-const TRENDING_TOPICS = [
-  { tag: "今天也想辞职", count: "12.3万", hot: true },
-  { tag: "凌晨emo了", count: "8.7万", hot: false },
-  { tag: "下班后不想回复消息", count: "6.2万", hot: true },
-  { tag: "社恐真的好累", count: "5.1万", hot: false },
-  { tag: "又熬夜了救命", count: "4.8万", hot: false },
-]
+interface TrendingWidgetProps {
+  t: Translations
+}
 
-export function TrendingWidget() {
+export function TrendingWidget({ t }: TrendingWidgetProps) {
   return (
     <div className="bg-card border border-border rounded-2xl p-4">
       <div className="flex items-center gap-2 mb-4">
         <TrendingUp className="w-5 h-5 text-orange-400" />
-        <h3 className="font-semibold text-foreground">热门话题</h3>
+        <h3 className="font-semibold text-foreground">{t.trendingTopics}</h3>
       </div>
 
       <div className="space-y-3">
-        {TRENDING_TOPICS.map((topic, index) => (
+        {t.trendingItems.map((topic, index) => (
           <motion.button
             key={topic.tag}
             initial={{ opacity: 0, x: 20 }}
@@ -41,7 +38,7 @@ export function TrendingWidget() {
                 )}
               </div>
               <span className="text-xs text-muted-foreground">
-                {topic.count} 讨论
+                {topic.count} {t.discussions}
               </span>
             </div>
           </motion.button>
@@ -49,7 +46,7 @@ export function TrendingWidget() {
       </div>
 
       <button className="w-full mt-4 text-sm text-primary hover:underline text-center">
-        查看更多
+        {t.seeMore}
       </button>
     </div>
   )

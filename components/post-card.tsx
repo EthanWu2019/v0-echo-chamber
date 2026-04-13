@@ -5,23 +5,28 @@ import { motion, AnimatePresence } from "framer-motion"
 import { Heart, MessageCircle, Repeat2, Share, ChevronDown, ChevronUp, Eye } from "lucide-react"
 import type { Post } from "@/lib/types"
 import { CommentItem } from "./comment-item"
+import type { Language, Translations } from "@/lib/i18n"
 import { formatDistanceToNow } from "date-fns"
-import { zhCN } from "date-fns/locale"
+import { zhCN, enUS } from "date-fns/locale"
 
 interface PostCardProps {
   post: Post
   onReplyToComment: (postId: string, commentId: string, content: string) => void
   replyingCommentIds?: Set<string>
+  lang: Language
+  t: Translations
 }
 
-export function PostCard({ post, onReplyToComment, replyingCommentIds = new Set() }: PostCardProps) {
+export function PostCard({ post, onReplyToComment, replyingCommentIds = new Set(), lang, t }: PostCardProps) {
   const [expanded, setExpanded] = useState(true)
   const [liked, setLiked] = useState(false)
   const [likeCount, setLikeCount] = useState(post.likes)
   const [repostCount, setRepostCount] = useState(post.reposts)
   const [viewCount, setViewCount] = useState(post.views)
 
-  // 同步外部数据变化
+  const dateLocale = lang === "zh" ? zhCN : enUS
+
+  // Sync external data changes
   useEffect(() => {
     setLikeCount(post.likes)
     setRepostCount(post.reposts)
@@ -45,7 +50,7 @@ export function PostCard({ post, onReplyToComment, replyingCommentIds = new Set(
   const negativeComments = post.comments.filter(c => c.sentimentImpact < 0 && !c.isTyping)
   const hasNegativeVibes = negativeComments.length >= 2
 
-  // 检查某个评论是否正在被回复
+  // Check if a comment is being replied to
   const isCommentReplying = (commentId: string): boolean => {
     return replyingCommentIds.has(commentId)
   }
@@ -66,11 +71,11 @@ export function PostCard({ post, onReplyToComment, replyingCommentIds = new Set(
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-foreground">我</span>
-              <span className="text-muted-foreground text-sm">@myself</span>
+              <span className="font-semibold text-foreground">{t.me}</span>
+              <span className="text-muted-foreground text-sm">{t.myself}</span>
               <span className="text-muted-foreground text-sm">·</span>
               <span className="text-muted-foreground text-sm">
-                {formatDistanceToNow(post.timestamp, { locale: zhCN, addSuffix: true })}
+                {formatDistanceToNow(post.timestamp, { locale: dateLocale, addSuffix: true })}
               </span>
             </div>
             <p className="mt-2 text-foreground leading-relaxed whitespace-pre-wrap">
@@ -150,7 +155,7 @@ export function PostCard({ post, onReplyToComment, replyingCommentIds = new Set(
                     transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                     className="w-4 h-4 border-2 border-muted-foreground border-t-transparent rounded-full"
                   />
-                  <span>网友们正在输入...</span>
+                  <span>{t.usersTyping}</span>
                 </div>
               )}
               
@@ -160,6 +165,8 @@ export function PostCard({ post, onReplyToComment, replyingCommentIds = new Set(
                   comment={comment}
                   onReply={handleReply}
                   isReplying={isCommentReplying(comment.id)}
+                  lang={lang}
+                  t={t}
                 />
               ))}
             </div>
@@ -173,12 +180,12 @@ export function PostCard({ post, onReplyToComment, replyingCommentIds = new Set(
                 {expanded ? (
                   <>
                     <ChevronUp className="w-4 h-4" />
-                    收起评论
+                    {t.collapseComments}
                   </>
                 ) : (
                   <>
                     <ChevronDown className="w-4 h-4" />
-                    展开更多评论
+                    {t.expandComments}
                   </>
                 )}
               </button>

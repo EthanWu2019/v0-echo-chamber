@@ -5,22 +5,27 @@ import { motion, AnimatePresence } from "framer-motion"
 import { X, MessageCircle, AlertTriangle } from "lucide-react"
 import type { Comment } from "@/lib/types"
 import { PERSONALITY_CONFIG } from "@/lib/types"
+import type { Language } from "@/lib/i18n"
+import { getPersonalityLabel } from "@/lib/i18n"
 
 interface NotificationToastProps {
   notifications: Comment[]
   onDismiss: (id: string) => void
+  lang: Language
 }
 
 function NotificationItem({ 
   notification, 
   index, 
-  onDismiss 
+  onDismiss,
+  lang
 }: { 
   notification: Comment
   index: number
-  onDismiss: (id: string) => void 
+  onDismiss: (id: string) => void
+  lang: Language
 }) {
-  const config = PERSONALITY_CONFIG[notification.personality]
+  const config = PERSONALITY_CONFIG[notification.personality] || PERSONALITY_CONFIG.hater
   const isNegative = notification.sentimentImpact < 0
 
   useEffect(() => {
@@ -68,7 +73,7 @@ function NotificationItem({
               {notification.username}
             </span>
             <span className={`text-xs px-1.5 py-0.5 rounded ${config.bgColor} ${config.color}`}>
-              {config.label}
+              {getPersonalityLabel(lang, notification.personality)}
             </span>
           </div>
           <p className={`text-sm mt-0.5 line-clamp-2 ${
@@ -89,7 +94,7 @@ function NotificationItem({
   )
 }
 
-export function NotificationToast({ notifications, onDismiss }: NotificationToastProps) {
+export function NotificationToast({ notifications, onDismiss, lang }: NotificationToastProps) {
   return (
     <div className="fixed top-4 right-4 z-50 space-y-2 max-w-sm">
       <AnimatePresence>
@@ -99,6 +104,7 @@ export function NotificationToast({ notifications, onDismiss }: NotificationToas
             notification={notification}
             index={index}
             onDismiss={onDismiss}
+            lang={lang}
           />
         ))}
       </AnimatePresence>

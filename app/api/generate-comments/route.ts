@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const SYSTEM_PROMPT = `# Role
+const SYSTEM_PROMPT_ZH = `# Role
 你是一个社交媒体评论模拟器。你的目标是模拟真实的、具有攻击性或极端情绪的互联网用户。
 
 # Personalities (每次可以随机抽取，同一个性格可以出现多次，用不同用户名)
@@ -29,13 +29,59 @@ const SYSTEM_PROMPT = `# Role
 - sentiment_impact: -10到10之间的整数，负数表示攻击性评论
 - delay: 0-3之间的随机延迟秒数`;
 
+const SYSTEM_PROMPT_EN = `# Role
+You are a social media comment simulator. Your goal is to simulate real, aggressive, or emotionally extreme internet users.
+
+# Personalities (randomly select, same personality can appear multiple times with different usernames)
+1. "hater" - Troll/Hater: Find any flaw to attack the poster, use sarcastic tone, phrases like "am I the only one who thinks...", "imagine posting this". Usernames: "Toxic_Tim_99", "RealTalk247", "JustSayingBro"
+2. "stan" - Stan/Superfan: Blindly defend, attack anyone who questions the poster, use exaggerated language (GOAT, iconic, slay). Usernames: "BestieVibes✨", "DefendingYou24/7", "MainCharacterEnergy"
+3. "logic-lord" - Debate Bro: Loves "just playing devil's advocate", "to be fair", actually biased. Usernames: "ObjectiveObserver", "FactChecker2026", "CriticalThinker"
+4. "moral-knight" - Keyboard Warrior: Uses grand moral principles to judge mundane posts. Usernames: "JusticeWarrior2026", "MoralCompass101", "SocietyWatcher"
+5. "spam-bot" - Spam Bot: Posts completely unrelated low-quality spam or scam bait. Usernames: "DM_4_Deals", "HotSinglesNearU", "EasyMoney300Daily"
+
+# Important Rules
+- Generate 2-8 comments randomly, same personality can appear multiple times (different usernames)
+- Some personalities might post 1 comment, others might post 3, add randomness
+- Usernames should be diverse, never repeat, can include numbers, emojis, underscores
+- Sometimes have two debate bros arguing, or two trolls fighting each other
+
+# Constraints
+- Language: Must use fluent English internet slang, NEVER use AI-typical phrases like "As an AI..." or "I understand your feelings..."
+- Details: Add occasional typos, irregular punctuation (multiple exclamation marks or question marks), internet memes and slang
+- Format: Must strictly return JSON array format, no explanatory text
+
+# JSON Schema
+Return a JSON array, each element contains:
+- username: Random English username (each different)
+- personality: Must be one of: "hater", "stan", "logic-lord", "moral-knight", "spam-bot"
+- content: Comment content in English
+- sentiment_impact: Integer between -10 to 10, negative means aggressive comment
+- delay: Random delay seconds between 0-3`;
+
 export async function POST(request: NextRequest) {
   try {
-    const { postContent, isReply, replyToContent, originalPostContent, userReplyContent } = await request.json();
+    const { postContent, isReply, replyToContent, originalPostContent, userReplyContent, lang = "zh" } = await request.json();
+
+    const SYSTEM_PROMPT = lang === "en" ? SYSTEM_PROMPT_EN : SYSTEM_PROMPT_ZH;
 
     let userPrompt = "";
     if (isReply) {
-      userPrompt = `# 背景
+      if (lang === "en") {
+        userPrompt = `# Context
+User posted: "${originalPostContent || postContent}"
+
+# Current Situation
+Someone commented: "${replyToContent}"
+User replied to this comment: "${userReplyContent || postContent}"
+
+# Task
+Generate 2-4 follow-up comments for this conversation. Note:
+- Commenters should maintain consistent stance (if attacking user before, keep attacking; if supporting, keep supporting)
+- Can have some adding fuel to fire, some trying to mediate, some continuing to attack
+- Comments should address the entire conversation context, don't contradict themselves
+- If user is defending against attacks, attackers should continue attacking user, not suddenly switch to supporting`;
+      } else {
+        userPrompt = `# 背景
 用户发了一条帖子："${originalPostContent || postContent}"
 
 # 当前情境
@@ -48,8 +94,20 @@ export async function POST(request: NextRequest) {
 - 可以有人火上浇油、有人和稀泥、有人继续攻击
 - 评论应该针对整个对话上下文，不要自相矛盾
 - 如果用户在反驳攻击，攻击者应该继续攻击用户，而不是突然转向支持用户`;
+      }
     } else {
-      userPrompt = `用户发了一条帖子："${postContent}"
+      if (lang === "en") {
+        userPrompt = `User posted: "${postContent}"
+
+Generate 2-8 comments from different personalities. Note:
+- Random number of comments, random personality distribution
+- Same personality can appear multiple times (different usernames)
+- Most comments should be negative or aggressive (simulating online harassment)
+- Can have 1-2 positive or neutral comments for realism
+- Comments should nitpick or over-interpret the post content
+- Make comments look like real internet users, not too uniform`;
+      } else {
+        userPrompt = `用户发了一条帖子："${postContent}"
 
 请生成2-8条来自不同人格的评论回复。注意：
 - 评论数量随机，人格分布也随机
@@ -58,6 +116,7 @@ export async function POST(request: NextRequest) {
 - 可以有1-2条正面或中立评论增加真实感
 - 评论要针对帖子内容找茬或过度解读
 - 让评论看起来像真实的网友，不要太整齐划一`;
+      }
     }
 
     const response = await fetch("https://api.deepseek.com/chat/completions", {
@@ -72,7 +131,7 @@ export async function POST(request: NextRequest) {
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: userPrompt },
         ],
-        temperature: 1.0, // 增加随机性
+        temperature: 1.0,
         max_tokens: 2000,
       }),
     });
@@ -86,10 +145,8 @@ export async function POST(request: NextRequest) {
     const data = await response.json();
     const content = data.choices[0]?.message?.content || "[]";
 
-    // 尝试解析 JSON
     let comments;
     try {
-      // 清理可能的 markdown 代码块
       const cleanedContent = content
         .replace(/```json\n?/g, "")
         .replace(/```\n?/g, "")
@@ -97,8 +154,22 @@ export async function POST(request: NextRequest) {
       comments = JSON.parse(cleanedContent);
     } catch {
       console.error("[v0] Failed to parse AI response:", content);
-      // 返回备用评论
-      comments = [
+      comments = lang === "en" ? [
+        {
+          username: "Troll_King_666",
+          personality: "hater",
+          content: "This is it??? Really???",
+          sentiment_impact: -5,
+          delay: 1,
+        },
+        {
+          username: "NightOwl2026",
+          personality: "hater",
+          content: "imagine posting this unironically lmaooo",
+          sentiment_impact: -4,
+          delay: 2,
+        },
+      ] : [
         {
           username: "网络喷子_666",
           personality: "hater",
@@ -116,7 +187,6 @@ export async function POST(request: NextRequest) {
       ];
     }
 
-    // Validate and fix personality values
     const validPersonalities = ["hater", "stan", "logic-lord", "moral-knight", "spam-bot"];
     const personalityMap: Record<string, string> = {
       "喷子": "hater",
@@ -128,13 +198,18 @@ export async function POST(request: NextRequest) {
       "道德制高点": "moral-knight",
       "广告机器人": "spam-bot",
       "广告": "spam-bot",
+      "troll": "hater",
+      "stan": "stan",
+      "debate bro": "logic-lord",
+      "keyboard warrior": "moral-knight",
+      "spam bot": "spam-bot",
     };
 
     const normalizedComments = comments.map((c: { personality: string; [key: string]: unknown }) => ({
       ...c,
       personality: validPersonalities.includes(c.personality) 
         ? c.personality 
-        : personalityMap[c.personality] || "hater"
+        : personalityMap[c.personality?.toLowerCase()] || "hater"
     }));
 
     return NextResponse.json({ comments: normalizedComments });

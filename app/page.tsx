@@ -12,6 +12,8 @@ import { ScrollToTop } from "@/components/scroll-to-top"
 import { AccountWidget } from "@/components/account-widget"
 import type { Post, Comment, AICommentResponse, AccountStats } from "@/lib/types"
 import { PERSONALITY_CONFIG, getAvatarInitials } from "@/lib/types"
+import { translations, type Language } from "@/lib/i18n"
+import { getPersonalityLabel } from "@/lib/i18n"
 
 // Helper to generate unique IDs
 const generateId = () => Math.random().toString(36).substring(2, 9)
@@ -19,6 +21,7 @@ const generateId = () => Math.random().toString(36).substring(2, 9)
 // Call DeepSeek API to generate comments
 async function fetchAIComments(
   postContent: string,
+  lang: Language,
   isReply = false,
   replyToContent = "",
   originalPostContent = "",
@@ -33,7 +36,8 @@ async function fetchAIComments(
         isReply, 
         replyToContent,
         originalPostContent,
-        userReplyContent
+        userReplyContent,
+        lang
       }),
     })
 
@@ -47,9 +51,9 @@ async function fetchAIComments(
     console.error("[v0] Failed to fetch AI comments:", error)
     return [
       {
-        username: "系统提示",
+        username: lang === "en" ? "System" : "系统提示",
         personality: "hater" as const,
-        content: "评论加载失败，请重试",
+        content: lang === "en" ? "Failed to load comments, please retry" : "评论加载失败，请重试",
         sentiment_impact: 0,
         delay: 0,
       },
@@ -57,25 +61,7 @@ async function fetchAIComments(
   }
 }
 
-// Convert API response to Comment object
-const responseToComment = (res: AICommentResponse): Comment => {
-  const config = PERSONALITY_CONFIG[res.personality] || PERSONALITY_CONFIG.hater
-  return {
-    id: generateId(),
-    username: res.username,
-    avatar: getAvatarInitials(res.username),
-    personality: res.personality in PERSONALITY_CONFIG ? res.personality : "hater",
-    personalityLabel: config.label,
-    content: res.content,
-    sentimentImpact: res.sentiment_impact,
-    likes: Math.floor(Math.random() * 50),
-    reposts: Math.floor(Math.random() * 10),
-    timestamp: new Date(),
-    replies: [],
-  }
-}
-
-// 计算账号数据
+// Calculate account stats
 function calculateAccountStats(
   posts: Post[], 
   sentiment: number, 
@@ -85,27 +71,21 @@ function calculateAccountStats(
     sum + p.comments.filter(c => !c.isTyping).length, 0
   )
   
-  // 基础粉丝 = 帖子数 * 随机系数 + 评论互动带来的曝光
   const baseFollowers = posts.length * (15 + Math.floor(Math.random() * 10))
   const interactionBonus = Math.floor(totalComments * 2.5)
   const followers = baseFollowers + interactionBonus
 
-  // 黑粉比例与好感度负相关
   const haterRatio = Math.max(0.1, (100 - sentiment) / 100 * 0.6)
   const haters = Math.floor(followers * haterRatio)
 
-  // 声誉值主要由好感度决定
   const reputation = Math.max(0, Math.min(100, sentiment + Math.floor(Math.random() * 10) - 5))
 
-  // 争议度：负面评论越多越争议
   const controversy = Math.min(100, Math.floor(totalNegativeComments * 8 + (100 - sentiment) * 0.3))
 
-  // 影响力：发帖多、互动多则影响力大
   const influence = Math.min(100, Math.floor(
     posts.length * 10 + totalComments * 2 + followers * 0.05
   ))
 
-  // 总获赞
   const totalLikes = posts.reduce((sum, p) => {
     const postLikes = p.likes
     const commentLikes = p.comments.reduce((cSum, c) => cSum + c.likes, 0)
@@ -125,6 +105,7 @@ function calculateAccountStats(
 }
 
 export default function EchoChamberPage() {
+  const [lang, setLang] = useState<Language>("zh")
   const [posts, setPosts] = useState<Post[]>([])
   const [sentiment, setSentiment] = useState(75)
   const [sentimentTrend, setSentimentTrend] = useState<"up" | "down" | "stable">("stable")
@@ -136,7 +117,28 @@ export default function EchoChamberPage() {
   const [totalNegativeComments, setTotalNegativeComments] = useState(0)
   const [replyingCommentIds, setReplyingCommentIds] = useState<Set<string>>(new Set())
 
-  // 计算账号数据
+  // Get translations
+  const t = translations[lang]
+
+  // Convert API response to Comment object
+  const responseToComment = useCallback((res: AICommentResponse): Comment => {
+    const config = PERSONALITY_CONFIG[res.personality] || PERSONALITY_CONFIG.hater
+    return {
+      id: generateId(),
+      username: res.username,
+      avatar: getAvatarInitials(res.username),
+      personality: res.personality in PERSONALITY_CONFIG ? res.personality : "hater",
+      personalityLabel: getPersonalityLabel(lang, res.personality),
+      content: res.content,
+      sentimentImpact: res.sentiment_impact,
+      likes: Math.floor(Math.random() * 50),
+      reposts: Math.floor(Math.random() * 10),
+      timestamp: new Date(),
+      replies: [],
+    }
+  }, [lang])
+
+  // Calculate account stats
   const accountStats = calculateAccountStats(posts, sentiment, totalNegativeComments)
 
   // Update screen effects based on sentiment
@@ -144,14 +146,12 @@ export default function EchoChamberPage() {
     setIsLowSentiment(sentiment < 30)
   }, [sentiment])
 
-  // 模拟帖子数据增长
+  // Simulate post data growth
   useEffect(() => {
     const interval = setInterval(() => {
       setPosts(prev => prev.map(post => {
-        // 只对不在生成中的帖子增长数据
         if (post.isGenerating) return post
         
-        // 根据好感度决定增长速度
         const growthMultiplier = sentiment > 50 ? 1.5 : 0.5
         
         return {
@@ -165,6 +165,22 @@ export default function EchoChamberPage() {
 
     return () => clearInterval(interval)
   }, [sentiment])
+
+  // Handle language switch - reset everything
+  const handleLanguageSwitch = useCallback(() => {
+    const newLang = lang === "zh" ? "en" : "zh"
+    setLang(newLang)
+    // Reset all state
+    setPosts([])
+    setNotifications([])
+    setNotificationCount(0)
+    setSentiment(75)
+    setSentimentTrend("stable")
+    setTotalNegativeComments(0)
+    setActiveNav(newLang === "zh" ? "首页" : "Home")
+    setIsLowSentiment(false)
+    setReplyingCommentIds(new Set())
+  }, [lang])
 
   // Handle sentiment change
   const handleSentimentChange = useCallback((impact: number) => {
@@ -195,15 +211,12 @@ export default function EchoChamberPage() {
 
     setPosts(prev => [newPost, ...prev])
 
-    // Generate AI comments via DeepSeek API
     try {
-      const aiResponses = await fetchAIComments(content)
+      const aiResponses = await fetchAIComments(content, lang)
       
-      // Add comments one by one with delays
       for (let i = 0; i < aiResponses.length; i++) {
         const response = aiResponses[i]
         
-        // Add typing indicator first
         setPosts(prev => prev.map(p => {
           if (p.id !== newPost.id) return p
           return {
@@ -215,10 +228,8 @@ export default function EchoChamberPage() {
           }
         }))
 
-        // Wait for the delay
         await new Promise(resolve => setTimeout(resolve, (response.delay + 0.5) * 1000))
 
-        // Replace typing with actual comment
         const comment = responseToComment(response)
         
         setPosts(prev => prev.map(p => {
@@ -233,10 +244,8 @@ export default function EchoChamberPage() {
           }
         }))
 
-        // Update sentiment
         handleSentimentChange(response.sentiment_impact)
 
-        // Add to notifications if negative
         if (response.sentiment_impact < 0) {
           setNotifications(prev => [comment, ...prev].slice(0, 10))
           setNotificationCount(prev => prev + 1)
@@ -250,9 +259,9 @@ export default function EchoChamberPage() {
         p.id === newPost.id ? { ...p, isGenerating: false } : p
       ))
     }
-  }, [handleSentimentChange])
+  }, [handleSentimentChange, responseToComment, lang])
 
-  // Handle reply to comment - 获取帖子原文用于上下文
+  // Get post content for context
   const getPostContent = useCallback((postId: string) => {
     return posts.find(p => p.id === postId)?.content || ""
   }, [posts])
@@ -263,11 +272,10 @@ export default function EchoChamberPage() {
     commentId: string,
     content: string
   ) => {
-    // Add user reply
     const userReply: Comment = {
       id: generateId(),
-      username: "我",
-      avatar: "我",
+      username: t.me,
+      avatar: t.me.charAt(0).toUpperCase(),
       personality: "stan",
       personalityLabel: "",
       content,
@@ -278,7 +286,6 @@ export default function EchoChamberPage() {
       replies: [],
     }
 
-    // Find the original comment
     const findComment = (comments: Comment[], id: string): Comment | undefined => {
       for (const c of comments) {
         if (c.id === id) return c
@@ -291,7 +298,6 @@ export default function EchoChamberPage() {
     const post = posts.find(p => p.id === postId)
     const originalComment = post ? findComment(post.comments, commentId) : undefined
 
-    // Find and update the comment
     setPosts(prev => prev.map(p => {
       if (p.id !== postId) return p
       
@@ -307,13 +313,13 @@ export default function EchoChamberPage() {
       return { ...p, comments: updateReplies(p.comments) }
     }))
 
-    // Show typing indicator
     setReplyingCommentIds(prev => new Set(prev).add(commentId))
 
     if (originalComment) {
       const originalPostContent = getPostContent(postId)
       const responses = await fetchAIComments(
         content, 
+        lang,
         true, 
         originalComment.content,
         originalPostContent,
@@ -332,7 +338,6 @@ export default function EchoChamberPage() {
 
       await new Promise(resolve => setTimeout(resolve, (response.delay + 1) * 1000))
 
-      // Remove typing indicator
       setReplyingCommentIds(prev => {
         const next = new Set(prev)
         next.delete(commentId)
@@ -361,7 +366,7 @@ export default function EchoChamberPage() {
         setNotificationCount(prev => prev + 1)
       }
     }
-  }, [posts, handleSentimentChange, getPostContent])
+  }, [posts, handleSentimentChange, getPostContent, responseToComment, lang, t.me])
 
   // Dismiss notification
   const dismissNotification = useCallback((id: string) => {
@@ -371,10 +376,10 @@ export default function EchoChamberPage() {
   // Handle navigation
   const handleNavClick = useCallback((label: string) => {
     setActiveNav(label)
-    if (label === "通知") {
+    if (label === t.notifications) {
       setNotificationCount(0)
     }
-  }, [])
+  }, [t.notifications])
 
   return (
     <div className={`min-h-screen transition-all duration-500 ${
@@ -397,6 +402,7 @@ export default function EchoChamberPage() {
       <NotificationToast 
         notifications={notifications} 
         onDismiss={dismissNotification}
+        lang={lang}
       />
 
       {/* Scroll to Top */}
@@ -408,6 +414,9 @@ export default function EchoChamberPage() {
           notificationCount={notificationCount} 
           onNavClick={handleNavClick}
           activeNav={activeNav}
+          lang={lang}
+          t={t}
+          onLanguageSwitch={handleLanguageSwitch}
         />
       </div>
 
@@ -425,10 +434,10 @@ export default function EchoChamberPage() {
           </motion.h1>
 
           {/* Home View */}
-          {activeNav === "首页" && (
+          {activeNav === t.home && (
             <>
               {/* Post Box */}
-              <PostBox onPost={handlePost} isLoading={isPosting} />
+              <PostBox onPost={handlePost} isLoading={isPosting} t={t} />
 
               {/* Posts Feed */}
               <div className="mt-6 space-y-4">
@@ -439,6 +448,8 @@ export default function EchoChamberPage() {
                       post={post}
                       onReplyToComment={handleReplyToComment}
                       replyingCommentIds={replyingCommentIds}
+                      lang={lang}
+                      t={t}
                     />
                   ))}
                 </AnimatePresence>
@@ -450,10 +461,10 @@ export default function EchoChamberPage() {
                     className="text-center py-12"
                   >
                     <p className="text-muted-foreground text-lg mb-2">
-                      还没有动态
+                      {t.noPostsYet}
                     </p>
                     <p className="text-muted-foreground text-sm">
-                      发一条试试，体验社交媒体的「另一面」
+                      {t.tryPosting}
                     </p>
                   </motion.div>
                 )}
@@ -462,7 +473,7 @@ export default function EchoChamberPage() {
           )}
 
           {/* Notifications View */}
-          {activeNav === "通知" && (
+          {activeNav === t.notifications && (
             <div className="space-y-3">
               {notifications.length === 0 ? (
                 <motion.div
@@ -471,10 +482,10 @@ export default function EchoChamberPage() {
                   className="text-center py-12"
                 >
                   <p className="text-muted-foreground text-lg mb-2">
-                    暂无通知
+                    {t.noNotifications}
                   </p>
                   <p className="text-muted-foreground text-sm">
-                    发布动态后，这里会显示收到的评论通知
+                    {t.notificationsHint}
                   </p>
                 </motion.div>
               ) : (
@@ -504,7 +515,7 @@ export default function EchoChamberPage() {
                                 {notification.username}
                               </span>
                               <span className="text-sm text-muted-foreground">
-                                评论了你的动态
+                                {t.commentedOnYourPost}
                               </span>
                             </div>
                             <p className={`mt-1 text-sm ${
@@ -523,7 +534,7 @@ export default function EchoChamberPage() {
           )}
 
           {/* Profile View */}
-          {activeNav === "个人主页" && (
+          {activeNav === t.profile && (
             <div className="space-y-6">
               {/* Profile Header */}
               <div className="bg-card border border-border rounded-2xl p-6">
@@ -532,35 +543,35 @@ export default function EchoChamberPage() {
                     <span className="text-white text-2xl font-bold">U</span>
                   </div>
                   <div>
-                    <h2 className="text-xl font-bold text-foreground">模拟用户</h2>
-                    <p className="text-muted-foreground">@simulated_user</p>
+                    <h2 className="text-xl font-bold text-foreground">{t.simulatedUser}</h2>
+                    <p className="text-muted-foreground">{t.simulatedHandle}</p>
                     <p className="text-sm text-muted-foreground mt-2">
-                      这是一个用于体验网络暴力模拟的虚拟账户
+                      {t.profileBio}
                     </p>
                   </div>
                 </div>
                 <div className="flex gap-6 mt-4 pt-4 border-t border-border">
                   <div>
                     <span className="font-bold text-foreground">{posts.length}</span>
-                    <span className="text-muted-foreground ml-1">动态</span>
+                    <span className="text-muted-foreground ml-1">{t.posts}</span>
                   </div>
                   <div>
                     <span className="font-bold text-foreground">{accountStats.following}</span>
-                    <span className="text-muted-foreground ml-1">关注</span>
+                    <span className="text-muted-foreground ml-1">{t.following}</span>
                   </div>
                   <div>
                     <span className="font-bold text-foreground">{accountStats.followers}</span>
-                    <span className="text-muted-foreground ml-1">粉丝</span>
+                    <span className="text-muted-foreground ml-1">{t.followers}</span>
                   </div>
                 </div>
               </div>
 
               {/* User Posts */}
               <div>
-                <h3 className="font-semibold text-foreground mb-4">我的动态</h3>
+                <h3 className="font-semibold text-foreground mb-4">{t.myPosts}</h3>
                 {posts.length === 0 ? (
                   <p className="text-muted-foreground text-center py-8">
-                    还没有发布任何动态
+                    {t.noPostsPublished}
                   </p>
                 ) : (
                   <div className="space-y-4">
@@ -570,6 +581,8 @@ export default function EchoChamberPage() {
                         post={post}
                         onReplyToComment={handleReplyToComment}
                         replyingCommentIds={replyingCommentIds}
+                        lang={lang}
+                        t={t}
                       />
                     ))}
                   </div>
@@ -583,9 +596,9 @@ export default function EchoChamberPage() {
       {/* Right Sidebar - sticky */}
       <aside className="fixed right-0 top-0 h-screen w-80 border-l border-border bg-card overflow-y-auto">
         <div className="p-6 space-y-6">
-          <SentimentWidget sentiment={sentiment} trend={sentimentTrend} />
-          <AccountWidget stats={accountStats} />
-          <TrendingWidget />
+          <SentimentWidget sentiment={sentiment} trend={sentimentTrend} t={t} />
+          <AccountWidget stats={accountStats} t={t} />
+          <TrendingWidget t={t} />
         </div>
       </aside>
     </div>

@@ -2,17 +2,25 @@
 
 import { motion } from "framer-motion"
 import { TrendingDown, TrendingUp, Minus, AlertCircle } from "lucide-react"
+import type { Translations } from "@/lib/i18n"
 
 interface SentimentWidgetProps {
   sentiment: number
   trend: "up" | "down" | "stable"
+  t: Translations
 }
 
-export function SentimentWidget({ sentiment, trend }: SentimentWidgetProps) {
+export function SentimentWidget({ sentiment, trend, t }: SentimentWidgetProps) {
   const getColor = () => {
     if (sentiment >= 70) return { bar: "from-green-500 to-emerald-500", text: "text-green-400", bg: "bg-green-500/20" }
     if (sentiment >= 40) return { bar: "from-yellow-500 to-orange-500", text: "text-yellow-400", bg: "bg-yellow-500/20" }
     return { bar: "from-red-500 to-rose-600", text: "text-red-400", bg: "bg-red-500/20" }
+  }
+
+  const getStatusText = () => {
+    if (sentiment >= 70) return t.goodSituation
+    if (sentiment >= 40) return t.neutralOpinion
+    return t.reputationCrash
   }
 
   const color = getColor()
@@ -24,7 +32,7 @@ export function SentimentWidget({ sentiment, trend }: SentimentWidgetProps) {
     }`}>
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-semibold text-foreground flex items-center gap-2">
-          全网好感度
+          {t.publicSentiment}
           {isLow && (
             <motion.div
               animate={{ scale: [1, 1.1, 1] }}
@@ -71,7 +79,7 @@ export function SentimentWidget({ sentiment, trend }: SentimentWidgetProps) {
           {sentiment}%
         </span>
         <span className="text-sm text-muted-foreground">
-          {sentiment >= 70 ? "形势大好" : sentiment >= 40 ? "舆论中立" : "口碑崩盘"}
+          {getStatusText()}
         </span>
       </div>
 
@@ -83,7 +91,7 @@ export function SentimentWidget({ sentiment, trend }: SentimentWidgetProps) {
           className="mt-3 px-3 py-2 bg-red-500/10 border border-red-500/30 rounded-lg"
         >
           <p className="text-xs text-red-400">
-            ⚠️ 警告：负面舆论正在发酵，建议立即采取危机公关措施
+            {t.sentimentWarning}
           </p>
         </motion.div>
       )}

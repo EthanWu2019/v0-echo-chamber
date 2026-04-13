@@ -1,20 +1,32 @@
 "use client"
 
-import { Home, Bell, User, Radio } from "lucide-react"
+import { Home, Bell, User, Radio, Globe } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
+import type { Language, Translations } from "@/lib/i18n"
 
 interface SidebarProps {
   notificationCount: number
   onNavClick?: (label: string) => void
   activeNav?: string
+  lang: Language
+  t: Translations
+  onLanguageSwitch: () => void
 }
 
-export function Sidebar({ notificationCount, onNavClick, activeNav = "首页" }: SidebarProps) {
+export function Sidebar({ 
+  notificationCount, 
+  onNavClick, 
+  activeNav, 
+  lang,
+  t,
+  onLanguageSwitch 
+}: SidebarProps) {
   const navItems = [
-    { icon: Home, label: "首页", key: "home" },
-    { icon: Bell, label: "通知", hasNotification: true, key: "notifications" },
-    { icon: User, label: "个人主页", key: "profile" },
+    { icon: Home, label: t.home, key: "home" },
+    { icon: Bell, label: t.notifications, hasNotification: true, key: "notifications" },
+    { icon: User, label: t.profile, key: "profile" },
   ]
+  
   return (
     <aside className="fixed left-0 top-0 h-screen w-64 border-r border-border bg-card p-6 flex flex-col">
       {/* Logo */}
@@ -36,7 +48,7 @@ export function Sidebar({ notificationCount, onNavClick, activeNav = "首页" }:
       <nav className="flex-1 space-y-2">
         {navItems.map((item) => (
           <button
-            key={item.label}
+            key={item.key}
             onClick={() => onNavClick?.(item.label)}
             className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all
               ${activeNav === item.label 
@@ -71,10 +83,19 @@ export function Sidebar({ notificationCount, onNavClick, activeNav = "首页" }:
         ))}
       </nav>
 
+      {/* Language Switch Button */}
+      <button
+        onClick={onLanguageSwitch}
+        className="flex items-center gap-3 px-4 py-3 mb-4 rounded-xl text-muted-foreground hover:bg-secondary/50 hover:text-foreground transition-all"
+      >
+        <Globe className="w-6 h-6" />
+        <span className="text-base font-medium">{t.switchLanguage}</span>
+      </button>
+
       {/* Disclaimer */}
       <div className="pt-6 border-t border-border">
         <p className="text-xs text-muted-foreground leading-relaxed">
-          这是一个教育性模拟器，旨在展示网络暴力的危害。所有评论均由 AI 生成。
+          {t.disclaimer}
         </p>
       </div>
     </aside>

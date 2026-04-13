@@ -4,13 +4,15 @@ import { useState } from "react"
 import { Send } from "lucide-react"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
+import type { Translations } from "@/lib/i18n"
 
 interface PostBoxProps {
   onPost: (content: string) => void
   isLoading?: boolean
+  t: Translations
 }
 
-export function PostBox({ onPost, isLoading }: PostBoxProps) {
+export function PostBox({ onPost, isLoading, t }: PostBoxProps) {
   const [content, setContent] = useState("")
 
   const handleSubmit = () => {
@@ -28,20 +30,22 @@ export function PostBox({ onPost, isLoading }: PostBoxProps) {
         animate={{ opacity: 1, y: 0 }}
         className="flex items-center gap-2 mb-4 px-3 py-2 bg-pink-500/10 border border-pink-500/30 rounded-lg"
       >
-        <span className="text-base shrink-0">{"(=^･ω･^=)"}</span>
+        <span className="text-base shrink-0">{t.catEmoji}</span>
         <p className="text-xs text-pink-400">
-          请友善互动喵~ 文明发言，从我做起
+          {t.friendlyReminder}
         </p>
       </motion.div>
 
       {/* Input Area */}
       <div className="flex gap-4">
-        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 shrink-0" />
+        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 shrink-0 flex items-center justify-center">
+          <span className="text-white font-bold">U</span>
+        </div>
         <div className="flex-1">
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="在想什么？发条动态试试..."
+            placeholder={t.postPlaceholder}
             className="w-full bg-transparent resize-none text-foreground placeholder:text-muted-foreground outline-none min-h-[80px] text-base leading-relaxed"
             maxLength={280}
           />
@@ -65,7 +69,7 @@ export function PostBox({ onPost, isLoading }: PostBoxProps) {
               ) : (
                 <>
                   <Send className="w-4 h-4 mr-2" />
-                  广播
+                  {t.postButton}
                 </>
               )}
             </Button>

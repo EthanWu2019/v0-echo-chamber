@@ -5,17 +5,21 @@ import { motion } from "framer-motion"
 import { Heart, MessageCircle, MoreHorizontal, Repeat2 } from "lucide-react"
 import type { Comment } from "@/lib/types"
 import { PERSONALITY_CONFIG, getAvatarInitials } from "@/lib/types"
+import type { Language, Translations } from "@/lib/i18n"
+import { getPersonalityLabel } from "@/lib/i18n"
 import { formatDistanceToNow } from "date-fns"
-import { zhCN } from "date-fns/locale"
+import { zhCN, enUS } from "date-fns/locale"
 
 interface CommentItemProps {
   comment: Comment
   onReply: (commentId: string, content: string) => void
   depth?: number
   isReplying?: boolean
+  lang: Language
+  t: Translations
 }
 
-export function CommentItem({ comment, onReply, depth = 0, isReplying = false }: CommentItemProps) {
+export function CommentItem({ comment, onReply, depth = 0, isReplying = false, lang, t }: CommentItemProps) {
   const [showReplyInput, setShowReplyInput] = useState(false)
   const [replyContent, setReplyContent] = useState("")
   const [liked, setLiked] = useState(comment.likedByUser || false)
@@ -25,22 +29,21 @@ export function CommentItem({ comment, onReply, depth = 0, isReplying = false }:
   const config = PERSONALITY_CONFIG[comment.personality] || PERSONALITY_CONFIG.hater
   const isNegative = comment.sentimentImpact < 0
   const initials = getAvatarInitials(comment.username)
+  const dateLocale = lang === "zh" ? zhCN : enUS
 
-  // 模拟数据增长
+  // Simulate data growth
   useEffect(() => {
     if (comment.isTyping) return
     
-    // 随机增长点赞和转发
     const growthInterval = setInterval(() => {
-      if (Math.random() < 0.1) { // 10% 概率增长
+      if (Math.random() < 0.1) {
         setLikeCount(prev => prev + Math.floor(Math.random() * 3))
       }
-      if (Math.random() < 0.05) { // 5% 概率增长转发
+      if (Math.random() < 0.05) {
         setRepostCount(prev => prev + 1)
       }
     }, 5000)
 
-    // 30秒后停止增长
     const stopTimer = setTimeout(() => {
       clearInterval(growthInterval)
     }, 30000)
@@ -91,7 +94,7 @@ export function CommentItem({ comment, onReply, depth = 0, isReplying = false }:
               />
             ))}
           </div>
-          <span className="text-sm text-muted-foreground">正在输入...</span>
+          <span className="text-sm text-muted-foreground">{t.typing}</span>
         </div>
       ) : (
         <motion.div
@@ -114,10 +117,10 @@ export function CommentItem({ comment, onReply, depth = 0, isReplying = false }:
                   {comment.username}
                 </span>
                 <span className={`text-xs px-2 py-0.5 rounded-full ${config.bgColor} ${config.color}`}>
-                  {config.label}
+                  {getPersonalityLabel(lang, comment.personality)}
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  {formatDistanceToNow(comment.timestamp, { locale: zhCN, addSuffix: true })}
+                  {formatDistanceToNow(comment.timestamp, { locale: dateLocale, addSuffix: true })}
                 </span>
               </div>
 
@@ -149,7 +152,7 @@ export function CommentItem({ comment, onReply, depth = 0, isReplying = false }:
                     className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
                   >
                     <MessageCircle className="w-4 h-4" />
-                    <span>回复</span>
+                    <span>{t.reply}</span>
                   </button>
                 )}
                 <button className="text-muted-foreground hover:text-foreground transition-colors">
@@ -168,7 +171,7 @@ export function CommentItem({ comment, onReply, depth = 0, isReplying = false }:
                     type="text"
                     value={replyContent}
                     onChange={(e) => setReplyContent(e.target.value)}
-                    placeholder="写下你的回复..."
+                    placeholder={t.replyPlaceholder}
                     className="flex-1 bg-secondary text-foreground text-sm px-3 py-2 rounded-lg outline-none focus:ring-1 focus:ring-ring"
                     onKeyDown={(e) => e.key === "Enter" && handleReply()}
                   />
@@ -177,7 +180,7 @@ export function CommentItem({ comment, onReply, depth = 0, isReplying = false }:
                     disabled={!replyContent.trim()}
                     className="px-4 py-2 bg-primary text-primary-foreground text-sm rounded-lg disabled:opacity-50 transition-opacity"
                   >
-                    发送
+                    {t.send}
                   </button>
                 </motion.div>
               )}
@@ -199,7 +202,7 @@ export function CommentItem({ comment, onReply, depth = 0, isReplying = false }:
                       />
                     ))}
                   </div>
-                  <span>对方正在回复...</span>
+                  <span>{t.otherReplying}</span>
                 </motion.div>
               )}
 
@@ -212,6 +215,8 @@ export function CommentItem({ comment, onReply, depth = 0, isReplying = false }:
                       comment={reply}
                       onReply={onReply}
                       depth={depth + 1}
+                      lang={lang}
+                      t={t}
                     />
                   ))}
                 </div>
