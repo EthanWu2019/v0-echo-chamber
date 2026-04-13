@@ -5,15 +5,16 @@ import { motion, AnimatePresence } from "framer-motion"
 
 interface SidebarProps {
   notificationCount: number
+  onNavClick?: (label: string) => void
+  activeNav?: string
 }
 
-const navItems = [
-  { icon: Home, label: "首页", active: true },
-  { icon: Bell, label: "通知", hasNotification: true },
-  { icon: User, label: "个人主页" },
-]
-
-export function Sidebar({ notificationCount }: SidebarProps) {
+export function Sidebar({ notificationCount, onNavClick, activeNav = "首页" }: SidebarProps) {
+  const navItems = [
+    { icon: Home, label: "首页", key: "home" },
+    { icon: Bell, label: "通知", hasNotification: true, key: "notifications" },
+    { icon: User, label: "个人主页", key: "profile" },
+  ]
   return (
     <aside className="fixed left-0 top-0 h-screen w-64 border-r border-border bg-card p-6 flex flex-col">
       {/* Logo */}
@@ -36,8 +37,9 @@ export function Sidebar({ notificationCount }: SidebarProps) {
         {navItems.map((item) => (
           <button
             key={item.label}
+            onClick={() => onNavClick?.(item.label)}
             className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all
-              ${item.active 
+              ${activeNav === item.label 
                 ? "bg-secondary text-foreground" 
                 : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
               }`}

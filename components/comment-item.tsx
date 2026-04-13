@@ -42,7 +42,7 @@ export function CommentItem({ comment, onReply, depth = 0 }: CommentItemProps) {
     <motion.div
       initial={{ opacity: 0, x: isNegative ? -20 : 0, y: 10 }}
       animate={{ opacity: 1, x: 0, y: 0 }}
-      className={`${depth > 0 ? "ml-8 pl-4 border-l-2 border-border" : ""}`}
+      className={`${depth > 0 ? "ml-8 pl-4 border-l-2 border-border" : ""} mb-1`}
     >
       {/* Typing indicator */}
       {comment.isTyping ? (
@@ -62,15 +62,10 @@ export function CommentItem({ comment, onReply, depth = 0 }: CommentItemProps) {
         </div>
       ) : (
         <motion.div
-          className={`py-3 ${isNegative ? "relative" : ""}`}
+          className={`py-4 px-3 rounded-lg ${isNegative ? "relative bg-red-500/5" : "bg-secondary/30"}`}
           animate={isNegative ? { x: [0, -2, 2, -1, 1, 0] } : {}}
           transition={{ duration: 0.3 }}
         >
-          {/* Negative comment glow effect */}
-          {isNegative && (
-            <div className="absolute inset-0 bg-red-500/5 rounded-lg -mx-2 -my-1 pointer-events-none" />
-          )}
-          
           <div className="flex gap-3 relative">
             {/* Avatar */}
             <div 

@@ -72,6 +72,7 @@ export default function EchoChamberPage() {
   const [notificationCount, setNotificationCount] = useState(0)
   const [isPosting, setIsPosting] = useState(false)
   const [isLowSentiment, setIsLowSentiment] = useState(false)
+  const [activeNav, setActiveNav] = useState("首页")
 
   // Update screen effects based on sentiment
   useEffect(() => {
@@ -237,6 +238,14 @@ export default function EchoChamberPage() {
     setNotifications(prev => prev.filter(n => n.id !== id))
   }, [])
 
+  // Handle navigation
+  const handleNavClick = useCallback((label: string) => {
+    setActiveNav(label)
+    if (label === "通知") {
+      setNotificationCount(0)
+    }
+  }, [])
+
   return (
     <div className={`min-h-screen transition-all duration-500 ${
       isLowSentiment ? "grayscale-[30%]" : ""
@@ -261,7 +270,11 @@ export default function EchoChamberPage() {
       />
 
       {/* Sidebar */}
-      <Sidebar notificationCount={notificationCount} />
+      <Sidebar 
+        notificationCount={notificationCount} 
+        onNavClick={handleNavClick}
+        activeNav={activeNav}
+      />
 
       {/* Main Content */}
       <main className="ml-64 mr-80">
@@ -271,40 +284,159 @@ export default function EchoChamberPage() {
             className="text-xl font-bold text-foreground mb-6"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
+            key={activeNav}
           >
-            首页
+            {activeNav}
           </motion.h1>
 
-          {/* Post Box */}
-          <PostBox onPost={handlePost} isLoading={isPosting} />
+          {/* Home View */}
+          {activeNav === "首页" && (
+            <>
+              {/* Post Box */}
+              <PostBox onPost={handlePost} isLoading={isPosting} />
 
-          {/* Posts Feed */}
-          <div className="mt-6 space-y-4">
-            <AnimatePresence>
-              {posts.map((post) => (
-                <PostCard
-                  key={post.id}
-                  post={post}
-                  onReplyToComment={handleReplyToComment}
-                />
-              ))}
-            </AnimatePresence>
+              {/* Posts Feed */}
+              <div className="mt-6 space-y-4">
+                <AnimatePresence>
+                  {posts.map((post) => (
+                    <PostCard
+                      key={post.id}
+                      post={post}
+                      onReplyToComment={handleReplyToComment}
+                    />
+                  ))}
+                </AnimatePresence>
 
-            {posts.length === 0 && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="text-center py-12"
-              >
-                <p className="text-muted-foreground text-lg mb-2">
-                  还没有动态
-                </p>
-                <p className="text-muted-foreground text-sm">
-                  发一条试试，体验社交媒体的「另一面」
-                </p>
-              </motion.div>
-            )}
-          </div>
+                {posts.length === 0 && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="text-center py-12"
+                  >
+                    <p className="text-muted-foreground text-lg mb-2">
+                      还没有动态
+                    </p>
+                    <p className="text-muted-foreground text-sm">
+                      发一条试试，体验社交媒体的「另一面」
+                    </p>
+                  </motion.div>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* Notifications View */}
+          {activeNav === "通知" && (
+            <div className="space-y-3">
+              {notifications.length === 0 ? (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-center py-12"
+                >
+                  <p className="text-muted-foreground text-lg mb-2">
+                    暂无通知
+                  </p>
+                  <p className="text-muted-foreground text-sm">
+                    发布动态后，这里会显示收到的评论通知
+                  </p>
+                </motion.div>
+              ) : (
+                <AnimatePresence>
+                  {notifications.map((notification) => {
+                    const isNegative = notification.sentimentImpact < 0
+                    return (
+                      <motion.div
+                        key={notification.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        className={`bg-card border rounded-xl p-4 ${
+                          isNegative ? "border-red-500/30" : "border-border"
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className={`w-10 h-10 rounded-full shrink-0 ${
+                            isNegative 
+                              ? "bg-gradient-to-br from-red-500 to-orange-500" 
+                              : "bg-gradient-to-br from-blue-500 to-purple-500"
+                          }`} />
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className={`font-medium ${isNegative ? "text-red-300" : "text-foreground"}`}>
+                                {notification.username}
+                              </span>
+                              <span className="text-sm text-muted-foreground">
+                                评论了你的动态
+                              </span>
+                            </div>
+                            <p className={`mt-1 text-sm ${
+                              isNegative ? "text-red-200/80" : "text-foreground/80"
+                            }`}>
+                              {notification.content}
+                            </p>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )
+                  })}
+                </AnimatePresence>
+              )}
+            </div>
+          )}
+
+          {/* Profile View */}
+          {activeNav === "个人主页" && (
+            <div className="space-y-6">
+              {/* Profile Header */}
+              <div className="bg-card border border-border rounded-2xl p-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-purple-500" />
+                  <div>
+                    <h2 className="text-xl font-bold text-foreground">模拟用户</h2>
+                    <p className="text-muted-foreground">@simulated_user</p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      这是一个用于体验网络暴力模拟的虚拟账户
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-6 mt-4 pt-4 border-t border-border">
+                  <div>
+                    <span className="font-bold text-foreground">{posts.length}</span>
+                    <span className="text-muted-foreground ml-1">动态</span>
+                  </div>
+                  <div>
+                    <span className="font-bold text-foreground">0</span>
+                    <span className="text-muted-foreground ml-1">关注</span>
+                  </div>
+                  <div>
+                    <span className="font-bold text-foreground">0</span>
+                    <span className="text-muted-foreground ml-1">粉丝</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* User Posts */}
+              <div>
+                <h3 className="font-semibold text-foreground mb-4">我的动态</h3>
+                {posts.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-8">
+                    还没有发布任何动态
+                  </p>
+                ) : (
+                  <div className="space-y-4">
+                    {posts.map((post) => (
+                      <PostCard
+                        key={post.id}
+                        post={post}
+                        onReplyToComment={handleReplyToComment}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </main>
 

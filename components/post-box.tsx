@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Send, AlertTriangle } from "lucide-react"
+import { Send } from "lucide-react"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 
@@ -26,11 +26,11 @@ export function PostBox({ onPost, isLoading }: PostBoxProps) {
       <motion.div 
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center gap-2 mb-4 px-3 py-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg"
+        className="flex items-center gap-2 mb-4 px-3 py-2 bg-pink-500/10 border border-pink-500/30 rounded-lg"
       >
-        <AlertTriangle className="w-4 h-4 text-yellow-500 shrink-0" />
-        <p className="text-xs text-yellow-500">
-          警告：发布后将触发模拟网络暴力。这只是模拟，请保持理性。
+        <span className="text-base shrink-0">{"(=^･ω･^=)"}</span>
+        <p className="text-xs text-pink-400">
+          请友善互动喵~ 文明发言，从我做起
         </p>
       </motion.div>
 
