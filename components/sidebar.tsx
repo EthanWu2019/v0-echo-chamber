@@ -84,13 +84,18 @@ export function Sidebar({
       </nav>
 
       {/* Language Switch Button */}
-      <button
-        onClick={onLanguageSwitch}
-        className="flex items-center gap-3 px-4 py-3 mb-4 rounded-xl text-muted-foreground hover:bg-secondary/50 hover:text-foreground transition-all"
-      >
-        <Globe className="w-6 h-6" />
-        <span className="text-base font-medium">{t.switchLanguage}</span>
-      </button>
+      <div className="mb-4">
+        <button
+          onClick={onLanguageSwitch}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-muted-foreground hover:bg-secondary/50 hover:text-foreground transition-all"
+        >
+          <Globe className="w-6 h-6" />
+          <span className="text-base font-medium">{t.switchLanguage}</span>
+        </button>
+        <p className="text-xs text-muted-foreground/60 px-4 mt-1">
+          {t.languageWarning}
+        </p>
+      </div>
 
       {/* Disclaimer */}
       <div className="pt-6 border-t border-border">

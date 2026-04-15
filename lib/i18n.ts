@@ -88,6 +88,12 @@ export const translations = {
     
     // Language
     switchLanguage: "EN",
+    languageWarning: "切换语言将清空当前所有记录",
+    
+    // Delete
+    delete: "删除",
+    withdraw: "撤回",
+    deleteConfirm: "确定要删除这条评论吗？",
     
     // Error
     loadFailed: "评论加载失败，请重试",
@@ -189,6 +195,12 @@ export const translations = {
     
     // Language
     switchLanguage: "中",
+    languageWarning: "Switching language will clear all records",
+    
+    // Delete
+    delete: "Delete",
+    withdraw: "Withdraw",
+    deleteConfirm: "Delete this comment?",
     
     // Error
     loadFailed: "Failed to load comments, please retry",

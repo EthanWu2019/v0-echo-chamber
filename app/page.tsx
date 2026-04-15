@@ -18,6 +18,31 @@ import { getPersonalityLabel } from "@/lib/i18n"
 // Helper to generate unique IDs
 const generateId = () => Math.random().toString(36).substring(2, 9)
 
+// Analyze content sentiment - simple keyword-based analysis
+function analyzeContentSentiment(content: string, lang: Language): number {
+  const positiveWordsZh = ["开心", "快乐", "感谢", "幸福", "爱", "喜欢", "成功", "努力", "加油", "美好", "温暖", "希望", "祝福", "分享", "帮助", "善良", "正能量", "棒", "好"]
+  const negativeWordsZh = ["烦", "累", "讨厌", "恶心", "傻", "蠢", "垃圾", "滚", "死", "骂", "吐槽", "怒", "生气", "愤怒", "失望", "抱怨", "无语", "崩溃", "丧"]
+  
+  const positiveWordsEn = ["happy", "love", "thanks", "grateful", "excited", "amazing", "wonderful", "beautiful", "hope", "success", "proud", "blessed", "kind", "help", "share", "positive", "great", "awesome"]
+  const negativeWordsEn = ["hate", "angry", "annoyed", "frustrated", "upset", "sad", "depressed", "rant", "complain", "suck", "worst", "terrible", "awful", "stupid", "idiot", "damn", "crap", "ugh"]
+  
+  const positiveWords = lang === "zh" ? positiveWordsZh : positiveWordsEn
+  const negativeWords = lang === "zh" ? negativeWordsZh : negativeWordsEn
+  
+  const lowerContent = content.toLowerCase()
+  let score = 0
+  
+  positiveWords.forEach(word => {
+    if (lowerContent.includes(word)) score += 3
+  })
+  
+  negativeWords.forEach(word => {
+    if (lowerContent.includes(word)) score -= 3
+  })
+  
+  return Math.max(-10, Math.min(10, score))
+}
+
 // Call DeepSeek API to generate comments
 async function fetchAIComments(
   postContent: string,
@@ -25,7 +50,10 @@ async function fetchAIComments(
   isReply = false,
   replyToContent = "",
   originalPostContent = "",
-  userReplyContent = ""
+  userReplyContent = "",
+  isDeleteResponse = false,
+  deletedPersonality = "",
+  deletedUsername = ""
 ): Promise<AICommentResponse[]> {
   try {
     const response = await fetch("/api/generate-comments", {
@@ -37,7 +65,10 @@ async function fetchAIComments(
         replyToContent,
         originalPostContent,
         userReplyContent,
-        lang
+        lang,
+        isDeleteResponse,
+        deletedPersonality,
+        deletedUsername
       }),
     })
 
@@ -65,7 +96,8 @@ async function fetchAIComments(
 function calculateAccountStats(
   posts: Post[], 
   sentiment: number, 
-  totalNegativeComments: number
+  totalNegativeComments: number,
+  contentSentimentBonus: number
 ): AccountStats {
   const totalComments = posts.reduce((sum, p) => 
     sum + p.comments.filter(c => !c.isTyping).length, 0
@@ -79,13 +111,15 @@ function calculateAccountStats(
   const haterRatio = Math.max(0.1, (100 - sentiment) / 100 * 0.6)
   const haters = Math.floor(followers * haterRatio)
 
-  // Reputation directly tied to sentiment
-  const reputation = Math.max(0, Math.min(100, sentiment))
+  // Reputation based on sentiment AND content positivity
+  const reputation = Math.max(0, Math.min(100, sentiment + contentSentimentBonus))
 
-  const controversy = Math.min(100, Math.floor(totalNegativeComments * 8 + (100 - sentiment) * 0.3))
+  // Controversy based on negative comments and sentiment volatility
+  const controversy = Math.min(100, Math.floor(totalNegativeComments * 6 + (100 - sentiment) * 0.4))
 
+  // Influence based on engagement, not sentiment
   const influence = Math.min(100, Math.floor(
-    posts.length * 10 + totalComments * 2 + followers * 0.05
+    posts.length * 12 + totalComments * 3 + followers * 0.03
   ))
 
   const totalLikes = posts.reduce((sum, p) => {
@@ -107,7 +141,7 @@ function calculateAccountStats(
 }
 
 export default function EchoChamberPage() {
-  const [lang, setLang] = useState<Language>("zh")
+  const [lang, setLang] = useState<Language>("en") // Default to English
   const [posts, setPosts] = useState<Post[]>([])
   const [sentiment, setSentiment] = useState(75)
   const [sentimentTrend, setSentimentTrend] = useState<"up" | "down" | "stable">("stable")
@@ -115,9 +149,10 @@ export default function EchoChamberPage() {
   const [notificationCount, setNotificationCount] = useState(0)
   const [isPosting, setIsPosting] = useState(false)
   const [isLowSentiment, setIsLowSentiment] = useState(false)
-  const [activeNav, setActiveNav] = useState("首页")
+  const [activeNav, setActiveNav] = useState("Home") // Default English nav
   const [totalNegativeComments, setTotalNegativeComments] = useState(0)
   const [replyingCommentIds, setReplyingCommentIds] = useState<Set<string>>(new Set())
+  const [contentSentimentBonus, setContentSentimentBonus] = useState(0)
 
   // Get translations
   const t = translations[lang]
@@ -133,15 +168,15 @@ export default function EchoChamberPage() {
       personalityLabel: getPersonalityLabel(lang, res.personality),
       content: res.content,
       sentimentImpact: res.sentiment_impact,
-      likes: Math.floor(Math.random() * 50),
-      reposts: Math.floor(Math.random() * 10),
+      likes: 0,
+      reposts: 0,
       timestamp: new Date(),
       replies: [],
     }
   }, [lang])
 
   // Calculate account stats
-  const accountStats = calculateAccountStats(posts, sentiment, totalNegativeComments)
+  const accountStats = calculateAccountStats(posts, sentiment, totalNegativeComments, contentSentimentBonus)
 
   // Update screen effects based on sentiment
   useEffect(() => {
@@ -154,19 +189,21 @@ export default function EchoChamberPage() {
       setPosts(prev => prev.map(post => {
         if (post.isGenerating) return post
         
-        const growthMultiplier = sentiment > 50 ? 1.5 : 0.5
+        // Growth rate depends on influence and time since post
+        const ageMinutes = (Date.now() - new Date(post.timestamp).getTime()) / 60000
+        const growthMultiplier = ageMinutes < 2 ? 3 : ageMinutes < 5 ? 1.5 : 0.3
         
         return {
           ...post,
-          likes: post.likes + (Math.random() < 0.15 ? Math.floor(Math.random() * 3 * growthMultiplier) : 0),
-          reposts: post.reposts + (Math.random() < 0.05 ? 1 : 0),
-          views: post.views + Math.floor(Math.random() * 10 * growthMultiplier),
+          likes: post.likes + (Math.random() < 0.2 ? Math.floor(Math.random() * 3 * growthMultiplier) : 0),
+          reposts: post.reposts + (Math.random() < 0.08 ? 1 : 0),
+          views: post.views + Math.floor(Math.random() * 15 * growthMultiplier),
         }
       }))
-    }, 3000)
+    }, 2000)
 
     return () => clearInterval(interval)
-  }, [sentiment])
+  }, [])
 
   // Handle language switch - reset everything
   const handleLanguageSwitch = useCallback(() => {
@@ -182,6 +219,7 @@ export default function EchoChamberPage() {
     setActiveNav(newLang === "zh" ? "首页" : "Home")
     setIsLowSentiment(false)
     setReplyingCommentIds(new Set())
+    setContentSentimentBonus(0)
   }, [lang])
 
   // Handle sentiment change
@@ -200,13 +238,24 @@ export default function EchoChamberPage() {
   const handlePost = useCallback(async (content: string) => {
     setIsPosting(true)
     
+    // Analyze content sentiment and update reputation bonus
+    const contentScore = analyzeContentSentiment(content, lang)
+    setContentSentimentBonus(prev => Math.max(-20, Math.min(20, prev + contentScore)))
+    
+    // Apply immediate sentiment change based on content
+    if (contentScore > 0) {
+      handleSentimentChange(Math.floor(contentScore / 2))
+    } else if (contentScore < 0) {
+      handleSentimentChange(Math.floor(contentScore / 3))
+    }
+
     const newPost: Post = {
       id: generateId(),
       content,
       timestamp: new Date(),
-      likes: Math.floor(Math.random() * 5),
+      likes: 0,
       reposts: 0,
-      views: Math.floor(Math.random() * 50) + 10,
+      views: Math.floor(Math.random() * 20) + 5,
       comments: [],
       isGenerating: true,
     }
@@ -216,24 +265,31 @@ export default function EchoChamberPage() {
     try {
       const aiResponses = await fetchAIComments(content, lang)
       
-      for (let i = 0; i < aiResponses.length; i++) {
-        const response = aiResponses[i]
+      // Sort responses by delay to ensure proper order
+      const sortedResponses = [...aiResponses].sort((a, b) => a.delay - b.delay)
+      
+      for (let i = 0; i < sortedResponses.length; i++) {
+        const response = sortedResponses[i]
         
+        // Show typing indicator
         setPosts(prev => prev.map(p => {
           if (p.id !== newPost.id) return p
           return {
             ...p,
             comments: [
               ...p.comments.filter(c => !c.isTyping),
-              { ...responseToComment(response), isTyping: true }
+              { ...responseToComment(response), isTyping: true, id: `typing-${i}` }
             ]
           }
         }))
 
-        await new Promise(resolve => setTimeout(resolve, (response.delay + 0.5) * 1000))
+        // Wait based on delay (stans come first, others later)
+        const baseDelay = i === 0 ? 500 : 1000
+        await new Promise(resolve => setTimeout(resolve, baseDelay + response.delay * 800))
 
         const comment = responseToComment(response)
         
+        // Replace typing indicator with actual comment
         setPosts(prev => prev.map(p => {
           if (p.id !== newPost.id) return p
           return {
@@ -242,7 +298,7 @@ export default function EchoChamberPage() {
               ...p.comments.filter(c => !c.isTyping),
               comment
             ],
-            isGenerating: i < aiResponses.length - 1
+            isGenerating: i < sortedResponses.length - 1
           }
         }))
 
@@ -370,6 +426,64 @@ export default function EchoChamberPage() {
     }
   }, [posts, handleSentimentChange, getPostContent, responseToComment, lang, t.me])
 
+  // Handle delete comment
+  const handleDeleteComment = useCallback(async (
+    postId: string,
+    commentId: string,
+    personality: string,
+    username: string
+  ) => {
+    const isOwnComment = username === t.me
+
+    // Remove the comment
+    setPosts(prev => prev.map(p => {
+      if (p.id !== postId) return p
+      
+      const removeComment = (comments: Comment[]): Comment[] => {
+        return comments
+          .filter(c => c.id !== commentId)
+          .map(c => ({ ...c, replies: removeComment(c.replies) }))
+      }
+
+      return { ...p, comments: removeComment(p.comments) }
+    }))
+
+    // If deleting someone else's comment, generate their angry response
+    if (!isOwnComment) {
+      const originalPostContent = getPostContent(postId)
+      
+      const responses = await fetchAIComments(
+        originalPostContent,
+        lang,
+        false,
+        "",
+        "",
+        "",
+        true, // isDeleteResponse
+        personality,
+        username
+      )
+
+      if (responses.length > 0) {
+        const angryResponse = responseToComment(responses[0])
+        
+        await new Promise(resolve => setTimeout(resolve, 1500))
+
+        setPosts(prev => prev.map(p => {
+          if (p.id !== postId) return p
+          return { ...p, comments: [...p.comments, angryResponse] }
+        }))
+
+        handleSentimentChange(responses[0].sentiment_impact)
+
+        if (responses[0].sentiment_impact < 0) {
+          setNotifications(prev => [angryResponse, ...prev].slice(0, 10))
+          setNotificationCount(prev => prev + 1)
+        }
+      }
+    }
+  }, [t.me, getPostContent, lang, responseToComment, handleSentimentChange])
+
   // Dismiss notification
   const dismissNotification = useCallback((id: string) => {
     setNotifications(prev => prev.filter(n => n.id !== id))
@@ -449,6 +563,7 @@ export default function EchoChamberPage() {
                       key={post.id}
                       post={post}
                       onReplyToComment={handleReplyToComment}
+                      onDeleteComment={handleDeleteComment}
                       replyingCommentIds={replyingCommentIds}
                       lang={lang}
                       t={t}
@@ -582,6 +697,7 @@ export default function EchoChamberPage() {
                         key={post.id}
                         post={post}
                         onReplyToComment={handleReplyToComment}
+                        onDeleteComment={handleDeleteComment}
                         replyingCommentIds={replyingCommentIds}
                         lang={lang}
                         t={t}
@@ -598,9 +714,13 @@ export default function EchoChamberPage() {
       {/* Right Sidebar - sticky */}
       <aside className="fixed right-0 top-0 h-screen w-80 border-l border-border bg-card overflow-y-auto">
         <div className="p-6 space-y-6">
-          <SentimentWidget sentiment={sentiment} trend={sentimentTrend} t={t} />
+          <SentimentWidget 
+            sentiment={sentiment} 
+            trend={sentimentTrend}
+            t={t}
+          />
           <AccountWidget stats={accountStats} t={t} />
-          <TrendingWidget t={t} />
+          <TrendingWidget lang={lang} t={t} />
         </div>
       </aside>
     </div>

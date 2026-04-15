@@ -12,12 +12,20 @@ import { zhCN, enUS } from "date-fns/locale"
 interface PostCardProps {
   post: Post
   onReplyToComment: (postId: string, commentId: string, content: string) => void
+  onDeleteComment?: (postId: string, commentId: string, personality: string, username: string) => void
   replyingCommentIds?: Set<string>
   lang: Language
   t: Translations
 }
 
-export function PostCard({ post, onReplyToComment, replyingCommentIds = new Set(), lang, t }: PostCardProps) {
+export function PostCard({ 
+  post, 
+  onReplyToComment, 
+  onDeleteComment,
+  replyingCommentIds = new Set(), 
+  lang, 
+  t 
+}: PostCardProps) {
   const [expanded, setExpanded] = useState(true)
   const [liked, setLiked] = useState(false)
   const [likeCount, setLikeCount] = useState(post.likes)
@@ -26,7 +34,7 @@ export function PostCard({ post, onReplyToComment, replyingCommentIds = new Set(
 
   const dateLocale = lang === "zh" ? zhCN : enUS
 
-  // Sync external data changes
+  // Sync external data changes with animation
   useEffect(() => {
     setLikeCount(post.likes)
     setRepostCount(post.reposts)
@@ -35,6 +43,10 @@ export function PostCard({ post, onReplyToComment, replyingCommentIds = new Set(
 
   const handleReply = (commentId: string, content: string) => {
     onReplyToComment(post.id, commentId, content)
+  }
+
+  const handleDelete = (commentId: string, personality: string, username: string) => {
+    onDeleteComment?.(post.id, commentId, personality, username)
   }
 
   const handleLike = () => {
@@ -54,6 +66,18 @@ export function PostCard({ post, onReplyToComment, replyingCommentIds = new Set(
   const isCommentReplying = (commentId: string): boolean => {
     return replyingCommentIds.has(commentId)
   }
+
+  // Number animation component
+  const AnimatedNumber = ({ value }: { value: number }) => (
+    <motion.span
+      key={value}
+      initial={{ y: -10, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ type: "spring", stiffness: 300, damping: 20 }}
+    >
+      {value}
+    </motion.span>
+  )
 
   return (
     <motion.article
@@ -95,14 +119,9 @@ export function PostCard({ post, onReplyToComment, replyingCommentIds = new Set(
           </button>
           <button className="flex items-center gap-2 text-muted-foreground hover:text-green-400 transition-colors">
             <Repeat2 className="w-5 h-5" />
-            <motion.span 
-              key={repostCount}
-              initial={{ scale: 1.2 }}
-              animate={{ scale: 1 }}
-              className="text-sm"
-            >
-              {repostCount}
-            </motion.span>
+            <span className="text-sm tabular-nums">
+              <AnimatedNumber value={repostCount} />
+            </span>
           </button>
           <button 
             onClick={handleLike}
@@ -110,26 +129,21 @@ export function PostCard({ post, onReplyToComment, replyingCommentIds = new Set(
               liked ? "text-red-400" : "text-muted-foreground hover:text-red-400"
             }`}
           >
-            <Heart className={`w-5 h-5 ${liked ? "fill-current" : ""}`} />
-            <motion.span 
-              key={likeCount}
-              initial={{ scale: 1.2 }}
-              animate={{ scale: 1 }}
-              className="text-sm"
+            <motion.div
+              animate={liked ? { scale: [1, 1.3, 1] } : {}}
+              transition={{ duration: 0.3 }}
             >
-              {likeCount}
-            </motion.span>
+              <Heart className={`w-5 h-5 ${liked ? "fill-current" : ""}`} />
+            </motion.div>
+            <span className="text-sm tabular-nums">
+              <AnimatedNumber value={likeCount} />
+            </span>
           </button>
           <div className="flex items-center gap-2 text-muted-foreground">
             <Eye className="w-5 h-5" />
-            <motion.span 
-              key={viewCount}
-              initial={{ scale: 1.1 }}
-              animate={{ scale: 1 }}
-              className="text-sm"
-            >
-              {viewCount}
-            </motion.span>
+            <span className="text-sm tabular-nums">
+              <AnimatedNumber value={viewCount} />
+            </span>
           </div>
           <button className="text-muted-foreground hover:text-foreground transition-colors">
             <Share className="w-5 h-5" />
@@ -159,16 +173,20 @@ export function PostCard({ post, onReplyToComment, replyingCommentIds = new Set(
                 </div>
               )}
               
-              {post.comments.map((comment) => (
-                <CommentItem
-                  key={comment.id}
-                  comment={comment}
-                  onReply={handleReply}
-                  isReplying={isCommentReplying(comment.id)}
-                  lang={lang}
-                  t={t}
-                />
-              ))}
+              <AnimatePresence>
+                {post.comments.map((comment) => (
+                  <CommentItem
+                    key={comment.id}
+                    comment={comment}
+                    onReply={handleReply}
+                    onDelete={handleDelete}
+                    isReplying={isCommentReplying(comment.id)}
+                    lang={lang}
+                    t={t}
+                    isOwnComment={comment.username === t.me}
+                  />
+                ))}
+              </AnimatePresence>
             </div>
 
             {/* Expand/Collapse Button */}
