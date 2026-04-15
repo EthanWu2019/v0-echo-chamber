@@ -1,18 +1,22 @@
 "use client"
 
 import { useState } from "react"
-import { Send, Sparkles } from "lucide-react"
+import { Send, Shield, CheckCircle } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import type { Translations } from "@/lib/i18n"
 
+type ReviewPhase = "idle" | "reviewing" | "approved" | "posting"
+
 interface PostBoxProps {
   onPost: (content: string) => void
   isLoading?: boolean
+  reviewProgress?: number
+  reviewPhase?: ReviewPhase
   t: Translations
 }
 
-export function PostBox({ onPost, isLoading, t }: PostBoxProps) {
+export function PostBox({ onPost, isLoading, reviewProgress = 0, reviewPhase = "idle", t }: PostBoxProps) {
   const [content, setContent] = useState("")
 
   const handleSubmit = () => {
@@ -20,6 +24,13 @@ export function PostBox({ onPost, isLoading, t }: PostBoxProps) {
       onPost(content.trim())
       setContent("")
     }
+  }
+
+  const getReviewText = () => {
+    if (reviewPhase === "reviewing") return t.reviewing || "Reviewing..."
+    if (reviewPhase === "approved") return t.approved || "Approved!"
+    if (reviewPhase === "posting") return t.posting || "Posting..."
+    return t.postButton
   }
 
   return (
@@ -46,9 +57,57 @@ export function PostBox({ onPost, isLoading, t }: PostBoxProps) {
             value={content}
             onChange={(e) => setContent(e.target.value)}
             placeholder={t.postPlaceholder}
-            className="w-full bg-transparent resize-none text-foreground placeholder:text-muted-foreground outline-none min-h-[80px] text-base leading-relaxed"
+            disabled={isLoading}
+            className="w-full bg-transparent resize-none text-foreground placeholder:text-muted-foreground outline-none min-h-[80px] text-base leading-relaxed disabled:opacity-50"
             maxLength={280}
           />
+          
+          {/* Review Progress Bar */}
+          <AnimatePresence>
+            {isLoading && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mb-3"
+              >
+                <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+                  <motion.div
+                    className={`h-full ${
+                      reviewPhase === "approved" 
+                        ? "bg-green-500" 
+                        : "bg-gradient-to-r from-blue-500 to-purple-500"
+                    }`}
+                    initial={{ width: 0 }}
+                    animate={{ width: `${reviewProgress}%` }}
+                    transition={{ duration: 0.3, ease: "easeOut" }}
+                  />
+                </div>
+                <div className="flex items-center justify-center gap-2 mt-2">
+                  {reviewPhase === "reviewing" && (
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                    >
+                      <Shield className="w-4 h-4 text-blue-400" />
+                    </motion.div>
+                  )}
+                  {reviewPhase === "approved" && (
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: "spring", damping: 10 }}
+                    >
+                      <CheckCircle className="w-4 h-4 text-green-400" />
+                    </motion.div>
+                  )}
+                  <span className="text-xs text-muted-foreground">
+                    {getReviewText()}
+                  </span>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
           
           {/* Footer */}
           <div className="flex items-center justify-between pt-3 border-t border-border">
@@ -62,39 +121,21 @@ export function PostBox({ onPost, isLoading, t }: PostBoxProps) {
             >
               <AnimatePresence mode="wait">
                 {isLoading ? (
-                  <motion.div
+                  <motion.span
                     key="loading"
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
-                    className="flex items-center gap-2"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="text-sm"
                   >
-                    <motion.div
-                      animate={{ 
-                        scale: [1, 1.2, 1],
-                        rotate: [0, 180, 360]
-                      }}
-                      transition={{ 
-                        duration: 1.5, 
-                        repeat: Infinity,
-                        ease: "easeInOut"
-                      }}
-                    >
-                      <Sparkles className="w-4 h-4" />
-                    </motion.div>
-                    <motion.span
-                      animate={{ opacity: [0.5, 1, 0.5] }}
-                      transition={{ duration: 1.5, repeat: Infinity }}
-                    >
-                      {t.postButton}...
-                    </motion.span>
-                  </motion.div>
+                    {getReviewText()}
+                  </motion.span>
                 ) : (
                   <motion.div
                     key="normal"
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
                     className="flex items-center gap-2"
                   >
                     <Send className="w-4 h-4" />

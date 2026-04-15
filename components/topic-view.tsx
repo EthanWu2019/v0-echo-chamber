@@ -1,25 +1,34 @@
 "use client"
 
-import { motion } from "framer-motion"
-import { ArrowLeft, Flame, MessageCircle, Heart, Repeat2, Eye } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
+import { ArrowLeft, Flame, Loader2 } from "lucide-react"
 import type { Post } from "@/lib/types"
 import type { Language, Translations } from "@/lib/i18n"
-import { AnimatedCounter } from "./animated-counter"
-import { formatDistanceToNow } from "date-fns"
-import { zhCN, enUS } from "date-fns/locale"
+import { PostCard } from "./post-card"
 
 interface TopicViewProps {
   topic: { tag: string; count: string; hot: boolean }
   posts: Post[]
   onBack: () => void
-  onPostClick: (postId: string) => void
+  onReplyToComment: (postId: string, commentId: string, content: string) => void
+  onDeleteComment?: (postId: string, commentId: string, personality: string, username: string) => void
+  replyingCommentIds?: Set<string>
+  isLoading?: boolean
   lang: Language
   t: Translations
 }
 
-export function TopicView({ topic, posts, onBack, onPostClick, lang, t }: TopicViewProps) {
-  const dateLocale = lang === "zh" ? zhCN : enUS
-
+export function TopicView({ 
+  topic, 
+  posts, 
+  onBack, 
+  onReplyToComment,
+  onDeleteComment,
+  replyingCommentIds = new Set(),
+  isLoading,
+  lang, 
+  t 
+}: TopicViewProps) {
   return (
     <div className="space-y-4">
       {/* Topic Header */}
@@ -29,7 +38,7 @@ export function TopicView({ topic, posts, onBack, onPostClick, lang, t }: TopicV
           className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-4"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span className="text-sm">Back</span>
+          <span className="text-sm">{t.back || "Back"}</span>
         </button>
         
         <div className="flex items-center gap-3">
@@ -48,63 +57,45 @@ export function TopicView({ topic, posts, onBack, onPostClick, lang, t }: TopicV
         </div>
       </div>
 
+      {/* Loading State */}
+      {isLoading && (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+        </div>
+      )}
+
       {/* Posts */}
-      <div className="space-y-3">
-        {posts.map((post, index) => (
-          <motion.article
-            key={post.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-            onClick={() => onPostClick(post.id)}
-            className="bg-card border border-border rounded-2xl p-4 cursor-pointer hover:bg-secondary/30 transition-colors"
-          >
-            <div className="flex gap-3">
-              <div 
-                className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 shrink-0 flex items-center justify-center"
+      {!isLoading && (
+        <div className="space-y-4">
+          <AnimatePresence>
+            {posts.map((post, index) => (
+              <motion.div
+                key={post.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
               >
-                <span className="text-white font-bold text-sm">
-                  {post.content.charAt(0).toUpperCase()}
-                </span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-foreground truncate">
-                    {lang === "en" ? `User${Math.floor(Math.random() * 9999)}` : `用户${Math.floor(Math.random() * 9999)}`}
-                  </span>
-                  <span className="text-muted-foreground text-sm">·</span>
-                  <span className="text-muted-foreground text-sm">
-                    {formatDistanceToNow(post.timestamp, { locale: dateLocale, addSuffix: true })}
-                  </span>
-                </div>
-                <p className="mt-1 text-foreground line-clamp-3">
-                  {post.content}
-                </p>
-                
-                {/* Stats */}
-                <div className="flex items-center gap-6 mt-3 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-1.5">
-                    <MessageCircle className="w-4 h-4" />
-                    <AnimatedCounter value={post.comments.length} />
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Repeat2 className="w-4 h-4" />
-                    <AnimatedCounter value={post.reposts} />
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Heart className="w-4 h-4" />
-                    <AnimatedCounter value={post.likes} />
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Eye className="w-4 h-4" />
-                    <AnimatedCounter value={post.views} />
-                  </div>
-                </div>
-              </div>
+                <PostCard
+                  post={post}
+                  onReplyToComment={onReplyToComment}
+                  onDeleteComment={onDeleteComment}
+                  replyingCommentIds={replyingCommentIds}
+                  lang={lang}
+                  t={t}
+                  isOtherUser={true}
+                  username={(post as Post & { username?: string }).username}
+                />
+              </motion.div>
+            ))}
+          </AnimatePresence>
+
+          {posts.length === 0 && !isLoading && (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">{t.noPostsYet}</p>
             </div>
-          </motion.article>
-        ))}
-      </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

@@ -1,18 +1,12 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { X, AlertTriangle } from "lucide-react"
 import type { Comment } from "@/lib/types"
 import { PERSONALITY_CONFIG } from "@/lib/types"
 import type { Language } from "@/lib/i18n"
 import { getPersonalityLabel } from "@/lib/i18n"
-
-interface ToastNotification {
-  id: string
-  comment: Comment
-  dismissed: boolean
-}
 
 interface NotificationToastProps {
   notifications: Comment[]
@@ -33,14 +27,29 @@ function NotificationItem({
 }) {
   const config = PERSONALITY_CONFIG[notification.personality] || PERSONALITY_CONFIG.hater
   const isNegative = notification.sentimentImpact < 0
+  const timerRef = useRef<NodeJS.Timeout | null>(null)
+
+  const dismiss = useCallback(() => {
+    onDismiss(notification.id)
+  }, [notification.id, onDismiss])
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      onDismiss(notification.id)
+    // Clear any existing timer
+    if (timerRef.current) {
+      clearTimeout(timerRef.current)
+    }
+    
+    // Set new timer
+    timerRef.current = setTimeout(() => {
+      dismiss()
     }, 3000 + index * 300)
     
-    return () => clearTimeout(timer)
-  }, [notification.id, index, onDismiss])
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current)
+      }
+    }
+  }, [notification.id, index, dismiss])
 
   return (
     <motion.div
@@ -58,7 +67,7 @@ function NotificationItem({
           ? { duration: 0.3, ease: "easeInOut" }
           : { duration: 0.2 }
       }}
-      className={`bg-card/95 backdrop-blur-sm border rounded-lg p-2 shadow-lg max-w-[240px] ${
+      className={`bg-card/95 backdrop-blur-sm border rounded-lg p-2 shadow-lg max-w-[220px] ${
         isNegative ? "border-red-500/50" : "border-border"
       }`}
     >
@@ -68,8 +77,8 @@ function NotificationItem({
         )}
         
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5">
-            <span className={`text-xs font-medium truncate ${isNegative ? "text-red-300" : "text-foreground"}`}>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className={`text-xs font-medium truncate max-w-[80px] ${isNegative ? "text-red-300" : "text-foreground"}`}>
               {notification.username}
             </span>
             <span className={`text-[10px] px-1 py-0.5 rounded ${config.bgColor} ${config.color}`}>
@@ -84,7 +93,7 @@ function NotificationItem({
         </div>
 
         <button
-          onClick={() => onDismiss(notification.id)}
+          onClick={() => dismiss()}
           className="text-muted-foreground hover:text-foreground transition-colors p-0.5"
         >
           <X className="w-3 h-3" />
@@ -95,39 +104,18 @@ function NotificationItem({
 }
 
 export function NotificationToast({ notifications, onDismiss, lang }: NotificationToastProps) {
-  // Track which notifications have been shown as toasts
-  const [toastIds, setToastIds] = useState<Set<string>>(new Set())
-  const [visibleToasts, setVisibleToasts] = useState<ToastNotification[]>([])
-
-  // Add new notifications as toasts
-  useEffect(() => {
-    const newToasts = notifications.filter(n => !toastIds.has(n.id))
-    if (newToasts.length > 0) {
-      setToastIds(prev => {
-        const next = new Set(prev)
-        newToasts.forEach(n => next.add(n.id))
-        return next
-      })
-      setVisibleToasts(prev => [
-        ...newToasts.map(comment => ({ id: comment.id, comment, dismissed: false })),
-        ...prev
-      ].slice(0, 4))
-    }
-  }, [notifications, toastIds])
-
-  const handleDismissToast = (id: string) => {
-    setVisibleToasts(prev => prev.filter(t => t.id !== id))
-  }
+  // Only show the most recent 4 notifications as toasts
+  const visibleNotifications = notifications.slice(0, 4)
 
   return (
     <div className="fixed top-4 right-4 z-50 space-y-1.5">
-      <AnimatePresence>
-        {visibleToasts.slice(0, 4).map((toast, index) => (
+      <AnimatePresence mode="popLayout">
+        {visibleNotifications.map((notification, index) => (
           <NotificationItem
-            key={toast.id}
-            notification={toast.comment}
+            key={notification.id}
+            notification={notification}
             index={index}
-            onDismiss={handleDismissToast}
+            onDismiss={onDismiss}
             lang={lang}
           />
         ))}

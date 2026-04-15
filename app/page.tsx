@@ -16,17 +16,25 @@ import type { Post, Comment, AICommentResponse, AccountStats } from "@/lib/types
 import { PERSONALITY_CONFIG, getAvatarInitials } from "@/lib/types"
 import { translations, type Language } from "@/lib/i18n"
 import { getPersonalityLabel } from "@/lib/i18n"
+import { 
+  getRandomTopics, 
+  getPostsForTopic, 
+  getRandomOtherUserPost,
+  type CachedTopic
+} from "@/lib/cached-posts"
 
 // Helper to generate unique IDs
 const generateId = () => Math.random().toString(36).substring(2, 9)
 
+type ReviewPhase = "idle" | "reviewing" | "approved" | "posting"
+
 // Analyze content sentiment - keyword-based analysis
 function analyzeContentSentiment(content: string, lang: Language): number {
-  const positiveWordsZh = ["开心", "快乐", "感谢", "幸福", "爱", "喜欢", "成功", "努力", "加油", "美好", "温暖", "希望", "祝福", "分享", "帮助", "善良", "正能量", "棒", "好", "太棒了", "感动", "暖心", "可爱", "优秀"]
-  const negativeWordsZh = ["烦", "累", "讨厌", "恶心", "傻", "蠢", "垃圾", "滚", "死", "骂", "吐槽", "怒", "生气", "愤怒", "失望", "抱怨", "无语", "崩溃", "丧", "烂", "坑", "骗"]
+  const positiveWordsZh = ["开心", "快乐", "感谢", "幸福", "爱", "喜欢", "成功", "努力", "加油", "美好", "温暖", "希望", "祝福", "分享", "帮助", "善良", "正能量", "棒", "好", "太棒了", "感动", "暖心", "可爱", "优秀", "谢谢", "感恩", "祝", "开心", "愉快"]
+  const negativeWordsZh = ["烦", "累", "讨厌", "恶心", "傻", "蠢", "垃圾", "滚", "死", "骂", "吐槽", "怒", "生气", "愤怒", "失望", "抱怨", "无语", "崩溃", "丧", "烂", "坑", "骗", "草", "妈", "艹"]
   
-  const positiveWordsEn = ["happy", "love", "thanks", "grateful", "excited", "amazing", "wonderful", "beautiful", "hope", "success", "proud", "blessed", "kind", "help", "share", "positive", "great", "awesome", "fantastic", "incredible", "lovely", "sweet", "cute"]
-  const negativeWordsEn = ["hate", "angry", "annoyed", "frustrated", "upset", "sad", "depressed", "rant", "complain", "suck", "worst", "terrible", "awful", "stupid", "idiot", "damn", "crap", "ugh", "trash", "scam", "fake"]
+  const positiveWordsEn = ["happy", "love", "thanks", "grateful", "excited", "amazing", "wonderful", "beautiful", "hope", "success", "proud", "blessed", "kind", "help", "share", "positive", "great", "awesome", "fantastic", "incredible", "lovely", "sweet", "cute", "appreciate", "thankful", "joy", "celebrate", "congrats", "proud", "accomplished"]
+  const negativeWordsEn = ["hate", "angry", "annoyed", "frustrated", "upset", "sad", "depressed", "rant", "complain", "suck", "worst", "terrible", "awful", "stupid", "idiot", "damn", "crap", "ugh", "trash", "scam", "fake", "wtf", "fml", "toxic"]
   
   const positiveWords = lang === "zh" ? positiveWordsZh : positiveWordsEn
   const negativeWords = lang === "zh" ? negativeWordsZh : negativeWordsEn
@@ -35,14 +43,14 @@ function analyzeContentSentiment(content: string, lang: Language): number {
   let score = 0
   
   positiveWords.forEach(word => {
-    if (lowerContent.includes(word)) score += 4
+    if (lowerContent.includes(word)) score += 5
   })
   
   negativeWords.forEach(word => {
-    if (lowerContent.includes(word)) score -= 4
+    if (lowerContent.includes(word)) score -= 5
   })
   
-  return Math.max(-15, Math.min(15, score))
+  return Math.max(-20, Math.min(20, score))
 }
 
 // Call DeepSeek API to generate comments
@@ -86,59 +94,6 @@ async function fetchAIComments(
       sentiment_impact: 0,
       delay: 0,
     }]
-  }
-}
-
-// Fetch trending topics
-async function fetchTrendingTopics(lang: Language): Promise<TrendingTopic[]> {
-  try {
-    const response = await fetch("/api/generate-topics", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "generate_topics", lang }),
-    })
-    if (!response.ok) throw new Error("Failed to fetch topics")
-    const data = await response.json()
-    return data.data || []
-  } catch {
-    return lang === "en" ? [
-      { tag: "monday blues", count: "89K", hot: true },
-      { tag: "adulting is hard", count: "67K", hot: false },
-      { tag: "hot takes only", count: "123K", hot: true },
-      { tag: "3am thoughts", count: "45K", hot: false },
-      { tag: "work life balance", count: "78K", hot: true },
-    ] : [
-      { tag: "今天不想上班", count: "8.9万", hot: true },
-      { tag: "成年人太难了", count: "6.7万", hot: false },
-      { tag: "来点争议的", count: "12.3万", hot: true },
-      { tag: "凌晨emo", count: "4.5万", hot: false },
-      { tag: "工作生活平衡", count: "7.8万", hot: true },
-    ]
-  }
-}
-
-// Fetch topic posts
-async function fetchTopicPosts(topic: string, lang: Language): Promise<Post[]> {
-  try {
-    const response = await fetch("/api/generate-topics", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "generate_posts", lang, topic }),
-    })
-    if (!response.ok) throw new Error("Failed to fetch posts")
-    const data = await response.json()
-    return (data.data || []).map((p: { username: string; content: string; likes: number; reposts: number; views: number }) => ({
-      id: generateId(),
-      content: p.content,
-      timestamp: new Date(Date.now() - Math.random() * 3600000),
-      likes: p.likes || Math.floor(Math.random() * 500),
-      reposts: p.reposts || Math.floor(Math.random() * 100),
-      views: p.views || Math.floor(Math.random() * 10000),
-      comments: [],
-      username: p.username,
-    }))
-  } catch {
-    return []
   }
 }
 
@@ -200,10 +155,12 @@ export default function EchoChamberPage() {
   const [posts, setPosts] = useState<Post[]>([])
   const [sentiment, setSentiment] = useState(75)
   const [sentimentTrend, setSentimentTrend] = useState<"up" | "down" | "stable">("stable")
-  const [notifications, setNotifications] = useState<Comment[]>([])
+  const [toastNotifications, setToastNotifications] = useState<Comment[]>([])
   const [allNotifications, setAllNotifications] = useState<Comment[]>([])
   const [notificationCount, setNotificationCount] = useState(0)
   const [isPosting, setIsPosting] = useState(false)
+  const [reviewPhase, setReviewPhase] = useState<ReviewPhase>("idle")
+  const [reviewProgress, setReviewProgress] = useState(0)
   const [isLowSentiment, setIsLowSentiment] = useState(false)
   const [activeNav, setActiveNav] = useState("Home")
   const [totalNegativeComments, setTotalNegativeComments] = useState(0)
@@ -214,6 +171,8 @@ export default function EchoChamberPage() {
   const [isLoadingTopics, setIsLoadingTopics] = useState(false)
   const [selectedTopic, setSelectedTopic] = useState<TrendingTopic | null>(null)
   const [topicPosts, setTopicPosts] = useState<Post[]>([])
+  const [topicPostsCache, setTopicPostsCache] = useState<Record<string, Post[]>>({})
+  const [isLoadingTopicPosts, setIsLoadingTopicPosts] = useState(false)
   const [otherUserPosts, setOtherUserPosts] = useState<Post[]>([])
   
   const otherPostTimerRef = useRef<NodeJS.Timeout | null>(null)
@@ -240,9 +199,10 @@ export default function EchoChamberPage() {
     }
   }, [lang])
 
-  // Load initial topics
+  // Load initial topics from cache
   useEffect(() => {
-    fetchTrendingTopics(lang).then(setTrendingTopics)
+    const cachedTopics = getRandomTopics(lang, 5)
+    setTrendingTopics(cachedTopics.map(t => ({ tag: t.tag, count: t.count, hot: t.hot })))
   }, [lang])
 
   // Update follower history
@@ -267,12 +227,10 @@ export default function EchoChamberPage() {
         // Apply caps
         const atLikeCap = post.likes >= statsCap.likes
         const atViewCap = post.views >= statsCap.views
-        const atRepostCap = post.reposts >= statsCap.reposts
         
         return {
           ...post,
           likes: atLikeCap ? post.likes : post.likes + (Math.random() < 0.15 ? Math.floor(Math.random() * 3 * growthMultiplier) : 0),
-          reposts: atRepostCap ? post.reposts : post.reposts + (Math.random() < 0.05 ? 1 : 0),
           views: atViewCap ? post.views : post.views + Math.floor(Math.random() * 10 * growthMultiplier),
         }
       }))
@@ -288,31 +246,30 @@ export default function EchoChamberPage() {
     return () => clearInterval(interval)
   }, [statsCap])
 
-  // Generate other user posts periodically
+  // Generate other user posts periodically using cached data
   useEffect(() => {
     const generateOtherPost = async () => {
       if (posts.length === 0) return
       
-      const topics = trendingTopics.length > 0 
-        ? trendingTopics 
-        : [{ tag: lang === "en" ? "random thoughts" : "随便聊聊", count: "10K", hot: false }]
-      const randomTopic = topics[Math.floor(Math.random() * topics.length)]
+      // Use cached post
+      const cachedPost = getRandomOtherUserPost(lang)
       
-      const topicPostsData = await fetchTopicPosts(randomTopic.tag, lang)
-      if (topicPostsData.length > 0) {
-        const randomPost = topicPostsData[Math.floor(Math.random() * topicPostsData.length)]
-        
-        // Generate comments for this post
-        const aiResponses = await fetchAIComments(randomPost.content, lang)
-        const comments = aiResponses.map(responseToComment)
-        
-        setOtherUserPosts(prev => [{
-          ...randomPost,
-          id: generateId(),
-          comments,
-          timestamp: new Date(),
-        }, ...prev].slice(0, 5))
+      // Generate comments for this post
+      const aiResponses = await fetchAIComments(cachedPost.content, lang)
+      const comments = aiResponses.map(responseToComment)
+      
+      const newPost: Post = {
+        id: generateId(),
+        content: cachedPost.content,
+        timestamp: new Date(),
+        likes: cachedPost.likes,
+        views: cachedPost.views,
+        reposts: 0,
+        comments,
+        username: cachedPost.username,
       }
+      
+      setOtherUserPosts(prev => [newPost, ...prev].slice(0, 5))
     }
 
     // Generate first other post after user posts something
@@ -330,14 +287,14 @@ export default function EchoChamberPage() {
     return () => {
       if (otherPostTimerRef.current) clearInterval(otherPostTimerRef.current)
     }
-  }, [posts.length, trendingTopics, lang, responseToComment, otherUserPosts.length])
+  }, [posts.length, lang, responseToComment, otherUserPosts.length])
 
   // Language switch
   const handleLanguageSwitch = useCallback(() => {
     const newLang = lang === "zh" ? "en" : "zh"
     setLang(newLang)
     setPosts([])
-    setNotifications([])
+    setToastNotifications([])
     setAllNotifications([])
     setNotificationCount(0)
     setSentiment(75)
@@ -348,11 +305,13 @@ export default function EchoChamberPage() {
     setReplyingCommentIds(new Set())
     setContentSentimentBonus(0)
     setFollowerHistory([0, 0, 0, 0, 0, 0, 0, 0])
-    setTrendingTopics([])
     setSelectedTopic(null)
     setTopicPosts([])
+    setTopicPostsCache({})
     setOtherUserPosts([])
-    fetchTrendingTopics(newLang).then(setTrendingTopics)
+    // Load cached topics for new language
+    const cachedTopics = getRandomTopics(newLang, 5)
+    setTrendingTopics(cachedTopics.map(t => ({ tag: t.tag, count: t.count, hot: t.hot })))
   }, [lang])
 
   // Sentiment change
@@ -367,10 +326,30 @@ export default function EchoChamberPage() {
     }
   }, [])
 
-  // Handle new post
+  // Add notification (both toast and persistent)
+  const addNotification = useCallback((comment: Comment) => {
+    setToastNotifications(prev => [comment, ...prev].slice(0, 10))
+    setAllNotifications(prev => [comment, ...prev].slice(0, 50))
+    setNotificationCount(prev => prev + 1)
+  }, [])
+
+  // Handle new post with review process
   const handlePost = useCallback(async (content: string) => {
     setIsPosting(true)
+    setReviewPhase("reviewing")
+    setReviewProgress(0)
     
+    // Simulate review process
+    const reviewDuration = 2000 + Math.random() * 1000
+    const startTime = Date.now()
+    
+    const progressInterval = setInterval(() => {
+      const elapsed = Date.now() - startTime
+      const progress = Math.min(90, (elapsed / reviewDuration) * 100)
+      setReviewProgress(progress)
+    }, 50)
+    
+    // Analyze content sentiment
     const contentScore = analyzeContentSentiment(content, lang)
     setContentSentimentBonus(prev => Math.max(-20, Math.min(20, prev + contentScore)))
     
@@ -379,6 +358,18 @@ export default function EchoChamberPage() {
     } else if (contentScore < 0) {
       handleSentimentChange(Math.floor(contentScore / 3))
     }
+
+    // Wait for review simulation
+    await new Promise(resolve => setTimeout(resolve, reviewDuration))
+    clearInterval(progressInterval)
+    
+    // Show approved
+    setReviewProgress(100)
+    setReviewPhase("approved")
+    await new Promise(resolve => setTimeout(resolve, 500))
+    
+    // Start posting
+    setReviewPhase("posting")
 
     const newPost: Post = {
       id: generateId(),
@@ -392,10 +383,17 @@ export default function EchoChamberPage() {
     }
 
     setPosts(prev => [newPost, ...prev])
+    
+    // Reset review state
+    setReviewPhase("idle")
+    setReviewProgress(0)
 
     try {
       const aiResponses = await fetchAIComments(content, lang)
       const sortedResponses = [...aiResponses].sort((a, b) => a.delay - b.delay)
+      
+      // Add initial delay before comments start appearing (simulate real social media)
+      await new Promise(resolve => setTimeout(resolve, 3000 + Math.random() * 2000))
       
       for (let i = 0; i < sortedResponses.length; i++) {
         const response = sortedResponses[i]
@@ -413,7 +411,9 @@ export default function EchoChamberPage() {
         }))
 
         // Staggered delays - stans come fast, others slower
-        const personalityDelay = response.personality === "stan" ? 800 : 1500 + response.delay * 1000
+        const personalityDelay = response.personality === "stan" 
+          ? 1000 + Math.random() * 500
+          : 2000 + response.delay * 1500 + Math.random() * 1000
         await new Promise(resolve => setTimeout(resolve, personalityDelay))
 
         const comment = responseToComment(response)
@@ -430,9 +430,7 @@ export default function EchoChamberPage() {
         handleSentimentChange(response.sentiment_impact)
 
         if (response.sentiment_impact < 0) {
-          setNotifications(prev => [comment, ...prev].slice(0, 10))
-          setAllNotifications(prev => [comment, ...prev].slice(0, 50))
-          setNotificationCount(prev => prev + 1)
+          addNotification(comment)
         }
       }
     } catch {
@@ -443,15 +441,76 @@ export default function EchoChamberPage() {
         p.id === newPost.id ? { ...p, isGenerating: false } : p
       ))
     }
-  }, [handleSentimentChange, responseToComment, lang])
+  }, [handleSentimentChange, responseToComment, lang, addNotification])
 
   // Get post content
   const getPostContent = useCallback((postId: string) => {
     const userPost = posts.find(p => p.id === postId)
     if (userPost) return userPost.content
     const otherPost = otherUserPosts.find(p => p.id === postId)
-    return otherPost?.content || ""
-  }, [posts, otherUserPosts])
+    if (otherPost) return otherPost.content
+    const topicPost = topicPosts.find(p => p.id === postId)
+    return topicPost?.content || ""
+  }, [posts, otherUserPosts, topicPosts])
+
+  // Handle comment on other user's post
+  const handleCommentOnPost = useCallback(async (postId: string, content: string) => {
+    const userComment: Comment = {
+      id: generateId(),
+      username: t.me,
+      avatar: t.me.charAt(0).toUpperCase(),
+      personality: "stan",
+      personalityLabel: "",
+      content,
+      sentimentImpact: 0,
+      likes: 0,
+      reposts: 0,
+      timestamp: new Date(),
+      replies: [],
+    }
+
+    // Determine which post list to update
+    const isOtherUserPost = otherUserPosts.some(p => p.id === postId)
+    const isTopicPost = topicPosts.some(p => p.id === postId)
+    
+    if (isOtherUserPost) {
+      setOtherUserPosts(prev => prev.map(p => {
+        if (p.id !== postId) return p
+        return { ...p, comments: [...p.comments, userComment] }
+      }))
+    } else if (isTopicPost) {
+      setTopicPosts(prev => prev.map(p => {
+        if (p.id !== postId) return p
+        return { ...p, comments: [...p.comments, userComment] }
+      }))
+    }
+
+    // Generate AI reply
+    const postContent = getPostContent(postId)
+    const responses = await fetchAIComments(content, lang, true, "", postContent, content)
+    
+    if (responses.length > 0) {
+      await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 1500))
+      const aiReply = responseToComment(responses[0])
+      
+      if (isOtherUserPost) {
+        setOtherUserPosts(prev => prev.map(p => {
+          if (p.id !== postId) return p
+          return { ...p, comments: [...p.comments, aiReply] }
+        }))
+      } else if (isTopicPost) {
+        setTopicPosts(prev => prev.map(p => {
+          if (p.id !== postId) return p
+          return { ...p, comments: [...p.comments, aiReply] }
+        }))
+      }
+
+      handleSentimentChange(responses[0].sentiment_impact)
+      if (responses[0].sentiment_impact < 0) {
+        addNotification(aiReply)
+      }
+    }
+  }, [t.me, otherUserPosts, topicPosts, getPostContent, lang, responseToComment, handleSentimentChange, addNotification])
 
   // Handle reply
   const handleReplyToComment = useCallback(async (
@@ -482,10 +541,26 @@ export default function EchoChamberPage() {
       return undefined
     }
 
-    // Check both user posts and other user posts
+    // Determine which post list to update
     const isUserPost = posts.some(p => p.id === postId)
-    const targetPosts = isUserPost ? posts : otherUserPosts
-    const setTargetPosts = isUserPost ? setPosts : setOtherUserPosts
+    const isOtherUserPost = otherUserPosts.some(p => p.id === postId)
+    const isTopicPost = topicPosts.some(p => p.id === postId)
+    
+    let targetPosts: Post[] = []
+    let setTargetPosts: React.Dispatch<React.SetStateAction<Post[]>>
+    
+    if (isUserPost) {
+      targetPosts = posts
+      setTargetPosts = setPosts
+    } else if (isOtherUserPost) {
+      targetPosts = otherUserPosts
+      setTargetPosts = setOtherUserPosts
+    } else if (isTopicPost) {
+      targetPosts = topicPosts
+      setTargetPosts = setTopicPosts
+    } else {
+      return
+    }
     
     const post = targetPosts.find(p => p.id === postId)
     const originalComment = post ? findComment(post.comments, commentId) : undefined
@@ -554,12 +629,10 @@ export default function EchoChamberPage() {
       handleSentimentChange(response.sentiment_impact)
 
       if (response.sentiment_impact < 0) {
-        setNotifications(prev => [aiReply, ...prev].slice(0, 10))
-        setAllNotifications(prev => [aiReply, ...prev].slice(0, 50))
-        setNotificationCount(prev => prev + 1)
+        addNotification(aiReply)
       }
     }
-  }, [posts, otherUserPosts, handleSentimentChange, getPostContent, responseToComment, lang, t.me])
+  }, [posts, otherUserPosts, topicPosts, handleSentimentChange, getPostContent, responseToComment, lang, t.me, addNotification])
 
   // Handle delete comment
   const handleDeleteComment = useCallback(async (
@@ -570,7 +643,20 @@ export default function EchoChamberPage() {
   ) => {
     const isOwnComment = username === t.me
     const isUserPost = posts.some(p => p.id === postId)
-    const setTargetPosts = isUserPost ? setPosts : setOtherUserPosts
+    const isOtherUserPost = otherUserPosts.some(p => p.id === postId)
+    const isTopicPost = topicPosts.some(p => p.id === postId)
+    
+    let setTargetPosts: React.Dispatch<React.SetStateAction<Post[]>>
+    
+    if (isUserPost) {
+      setTargetPosts = setPosts
+    } else if (isOtherUserPost) {
+      setTargetPosts = setOtherUserPosts
+    } else if (isTopicPost) {
+      setTargetPosts = setTopicPosts
+    } else {
+      return
+    }
 
     setTargetPosts((prev: Post[]) => prev.map(p => {
       if (p.id !== postId) return p
@@ -609,17 +695,15 @@ export default function EchoChamberPage() {
         handleSentimentChange(responses[0].sentiment_impact)
 
         if (responses[0].sentiment_impact < 0) {
-          setNotifications(prev => [angryResponse, ...prev].slice(0, 10))
-          setAllNotifications(prev => [angryResponse, ...prev].slice(0, 50))
-          setNotificationCount(prev => prev + 1)
+          addNotification(angryResponse)
         }
       }
     }
-  }, [t.me, posts, getPostContent, lang, responseToComment, handleSentimentChange])
+  }, [t.me, posts, otherUserPosts, topicPosts, getPostContent, lang, responseToComment, handleSentimentChange, addNotification])
 
   // Dismiss toast notification (doesn't affect all notifications)
-  const dismissNotification = useCallback((id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id))
+  const dismissToastNotification = useCallback((id: string) => {
+    setToastNotifications(prev => prev.filter(n => n.id !== id))
   }, [])
 
   // Navigation
@@ -631,27 +715,56 @@ export default function EchoChamberPage() {
     }
   }, [t.notifications])
 
-  // Topic click
+  // Topic click - use cached posts
   const handleTopicClick = useCallback(async (topic: TrendingTopic) => {
     setSelectedTopic(topic)
     setActiveNav(t.home)
-    const topicPostsData = await fetchTopicPosts(topic.tag, lang)
+    
+    // Check if we have cached posts for this topic
+    if (topicPostsCache[topic.tag]) {
+      setTopicPosts(topicPostsCache[topic.tag])
+      return
+    }
+    
+    setIsLoadingTopicPosts(true)
+    
+    // Get cached posts for this topic
+    const cachedPosts = getPostsForTopic(topic.tag, lang)
     
     // Generate comments for each post
-    const postsWithComments = await Promise.all(topicPostsData.map(async (post) => {
-      const aiResponses = await fetchAIComments(post.content, lang)
-      return { ...post, comments: aiResponses.map(responseToComment) }
+    const postsWithComments = await Promise.all(cachedPosts.map(async (p) => {
+      const aiResponses = await fetchAIComments(p.content, lang)
+      return {
+        id: generateId(),
+        content: p.content,
+        timestamp: new Date(Date.now() - Math.random() * 3600000),
+        likes: p.likes,
+        reposts: 0,
+        views: p.views,
+        comments: aiResponses.map(responseToComment),
+        username: p.username,
+      } as Post
     }))
     
+    // Cache the posts
+    setTopicPostsCache(prev => ({ ...prev, [topic.tag]: postsWithComments }))
     setTopicPosts(postsWithComments)
-  }, [lang, responseToComment, t.home])
+    setIsLoadingTopicPosts(false)
+  }, [lang, responseToComment, t.home, topicPostsCache])
 
-  // Load more topics
-  const handleLoadMoreTopics = useCallback(async () => {
+  // Load more topics from cache
+  const handleLoadMoreTopics = useCallback(() => {
     setIsLoadingTopics(true)
-    const newTopics = await fetchTrendingTopics(lang)
-    setTrendingTopics(prev => [...prev, ...newTopics].slice(0, 15))
-    setIsLoadingTopics(false)
+    // Simulate loading delay
+    setTimeout(() => {
+      const newTopics = getRandomTopics(lang, 5)
+      setTrendingTopics(prev => {
+        const existingTags = new Set(prev.map(t => t.tag))
+        const unique = newTopics.filter(t => !existingTags.has(t.tag))
+        return [...prev, ...unique.map(t => ({ tag: t.tag, count: t.count, hot: t.hot }))].slice(0, 15)
+      })
+      setIsLoadingTopics(false)
+    }, 500)
   }, [lang])
 
   // All posts combined for home feed
@@ -676,8 +789,8 @@ export default function EchoChamberPage() {
 
       {/* Notification Toasts - separate from all notifications */}
       <NotificationToast 
-        notifications={notifications} 
-        onDismiss={dismissNotification}
+        notifications={toastNotifications} 
+        onDismiss={dismissToastNotification}
         lang={lang}
       />
 
@@ -713,7 +826,10 @@ export default function EchoChamberPage() {
               topic={selectedTopic}
               posts={topicPosts}
               onBack={() => setSelectedTopic(null)}
-              onPostClick={() => {}}
+              onReplyToComment={handleReplyToComment}
+              onDeleteComment={handleDeleteComment}
+              replyingCommentIds={replyingCommentIds}
+              isLoading={isLoadingTopicPosts}
               lang={lang}
               t={t}
             />
@@ -722,7 +838,13 @@ export default function EchoChamberPage() {
           {/* Home View */}
           {!selectedTopic && activeNav === t.home && (
             <>
-              <PostBox onPost={handlePost} isLoading={isPosting} t={t} />
+              <PostBox 
+                onPost={handlePost} 
+                isLoading={isPosting} 
+                reviewProgress={reviewProgress}
+                reviewPhase={reviewPhase}
+                t={t} 
+              />
 
               <div className="mt-6 space-y-4">
                 <AnimatePresence>
@@ -734,6 +856,7 @@ export default function EchoChamberPage() {
                         post={post}
                         onReplyToComment={handleReplyToComment}
                         onDeleteComment={handleDeleteComment}
+                        onCommentOnPost={isOtherUser ? handleCommentOnPost : undefined}
                         replyingCommentIds={replyingCommentIds}
                         lang={lang}
                         t={t}

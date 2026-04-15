@@ -99,6 +99,17 @@ export const translations = {
     loadFailed: "评论加载失败，请重试",
     systemHint: "系统提示",
     
+    // Review
+    reviewing: "审核中...",
+    approved: "审核通过",
+    posting: "发布中...",
+    
+    // Topic
+    back: "返回",
+    
+    // Comment
+    addComment: "写下你的评论...",
+    
     // Trending topics
     trendingItems: [
       { tag: "今天也想辞职", count: "12.3万", hot: true },
@@ -205,6 +216,17 @@ export const translations = {
     // Error
     loadFailed: "Failed to load comments, please retry",
     systemHint: "System",
+    
+    // Review
+    reviewing: "Reviewing...",
+    approved: "Approved!",
+    posting: "Posting...",
+    
+    // Topic
+    back: "Back",
+    
+    // Comment
+    addComment: "Add a comment...",
     
     // Trending topics
     trendingItems: [

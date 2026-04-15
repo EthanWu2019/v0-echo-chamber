@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Heart, MessageCircle, Repeat2, Share, ChevronDown, ChevronUp, Eye } from "lucide-react"
+import { Heart, MessageCircle, Share, ChevronDown, ChevronUp, Eye, Send } from "lucide-react"
 import type { Post } from "@/lib/types"
 import { CommentItem } from "./comment-item"
 import { AnimatedCounter } from "./animated-counter"
@@ -14,6 +14,7 @@ interface PostCardProps {
   post: Post
   onReplyToComment: (postId: string, commentId: string, content: string) => void
   onDeleteComment?: (postId: string, commentId: string, personality: string, username: string) => void
+  onCommentOnPost?: (postId: string, content: string) => void
   replyingCommentIds?: Set<string>
   lang: Language
   t: Translations
@@ -25,6 +26,7 @@ export function PostCard({
   post, 
   onReplyToComment, 
   onDeleteComment,
+  onCommentOnPost,
   replyingCommentIds = new Set(), 
   lang, 
   t,
@@ -34,6 +36,8 @@ export function PostCard({
   const [expanded, setExpanded] = useState(true)
   const [liked, setLiked] = useState(false)
   const [localLikeBonus, setLocalLikeBonus] = useState(0)
+  const [showCommentInput, setShowCommentInput] = useState(false)
+  const [commentText, setCommentText] = useState("")
 
   const dateLocale = lang === "zh" ? zhCN : enUS
 
@@ -55,6 +59,14 @@ export function PostCard({
     }
   }
 
+  const handleSubmitComment = () => {
+    if (commentText.trim() && onCommentOnPost) {
+      onCommentOnPost(post.id, commentText.trim())
+      setCommentText("")
+      setShowCommentInput(false)
+    }
+  }
+
   const negativeComments = post.comments.filter(c => c.sentimentImpact < 0 && !c.isTyping)
   const hasNegativeVibes = negativeComments.length >= 2
 
@@ -64,7 +76,7 @@ export function PostCard({
 
   const displayUsername = username || t.me
   const displayHandle = isOtherUser 
-    ? `@${displayUsername.toLowerCase().replace(/\s+/g, '_')}`
+    ? `@${displayUsername.toLowerCase().replace(/[^a-z0-9]/gi, '_')}`
     : t.myself
 
   return (
@@ -101,15 +113,17 @@ export function PostCard({
         {/* Post Actions */}
         <div className="flex items-center justify-between mt-4 pt-3 border-t border-border">
           <button 
-            onClick={() => setExpanded(!expanded)}
+            onClick={() => {
+              if (isOtherUser && onCommentOnPost) {
+                setShowCommentInput(!showCommentInput)
+              } else {
+                setExpanded(!expanded)
+              }
+            }}
             className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
           >
             <MessageCircle className="w-5 h-5" />
             <AnimatedCounter value={post.comments.filter(c => !c.isTyping).length} className="text-sm" />
-          </button>
-          <button className="flex items-center gap-2 text-muted-foreground hover:text-green-400 transition-colors">
-            <Repeat2 className="w-5 h-5" />
-            <AnimatedCounter value={post.reposts} className="text-sm" />
           </button>
           <button 
             onClick={handleLike}
@@ -134,6 +148,41 @@ export function PostCard({
           </button>
         </div>
       </div>
+
+      {/* Comment Input for Other Users' Posts */}
+      <AnimatePresence>
+        {showCommentInput && isOtherUser && onCommentOnPost && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="border-t border-border"
+          >
+            <div className="p-4 flex gap-3">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 shrink-0 flex items-center justify-center">
+                <span className="text-white text-sm font-bold">U</span>
+              </div>
+              <div className="flex-1 flex gap-2">
+                <input
+                  type="text"
+                  value={commentText}
+                  onChange={(e) => setCommentText(e.target.value)}
+                  placeholder={t.addComment || "Add a comment..."}
+                  className="flex-1 bg-secondary/50 rounded-full px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-primary/20"
+                  onKeyDown={(e) => e.key === "Enter" && handleSubmitComment()}
+                />
+                <button
+                  onClick={handleSubmitComment}
+                  disabled={!commentText.trim()}
+                  className="p-2 rounded-full bg-primary text-primary-foreground disabled:opacity-50 hover:bg-primary/90 transition-colors"
+                >
+                  <Send className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Comments Section */}
       <AnimatePresence>
