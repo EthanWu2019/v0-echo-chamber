@@ -1,8 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { Send } from "lucide-react"
-import { motion } from "framer-motion"
+import { Send, Sparkles } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import type { Translations } from "@/lib/i18n"
 
@@ -58,20 +58,50 @@ export function PostBox({ onPost, isLoading, t }: PostBoxProps) {
             <Button
               onClick={handleSubmit}
               disabled={!content.trim() || isLoading}
-              className="bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white font-medium px-6 rounded-full"
+              className="bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white font-medium px-6 rounded-full min-w-[100px]"
             >
-              {isLoading ? (
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                  className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
-                />
-              ) : (
-                <>
-                  <Send className="w-4 h-4 mr-2" />
-                  {t.postButton}
-                </>
-              )}
+              <AnimatePresence mode="wait">
+                {isLoading ? (
+                  <motion.div
+                    key="loading"
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    className="flex items-center gap-2"
+                  >
+                    <motion.div
+                      animate={{ 
+                        scale: [1, 1.2, 1],
+                        rotate: [0, 180, 360]
+                      }}
+                      transition={{ 
+                        duration: 1.5, 
+                        repeat: Infinity,
+                        ease: "easeInOut"
+                      }}
+                    >
+                      <Sparkles className="w-4 h-4" />
+                    </motion.div>
+                    <motion.span
+                      animate={{ opacity: [0.5, 1, 0.5] }}
+                      transition={{ duration: 1.5, repeat: Infinity }}
+                    >
+                      {t.postButton}...
+                    </motion.span>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="normal"
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    className="flex items-center gap-2"
+                  >
+                    <Send className="w-4 h-4" />
+                    <span>{t.postButton}</span>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </Button>
           </div>
         </div>

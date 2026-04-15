@@ -1,12 +1,18 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { X, MessageCircle, AlertTriangle } from "lucide-react"
+import { X, AlertTriangle } from "lucide-react"
 import type { Comment } from "@/lib/types"
 import { PERSONALITY_CONFIG } from "@/lib/types"
 import type { Language } from "@/lib/i18n"
 import { getPersonalityLabel } from "@/lib/i18n"
+
+interface ToastNotification {
+  id: string
+  comment: Comment
+  dismissed: boolean
+}
 
 interface NotificationToastProps {
   notifications: Comment[]
@@ -31,52 +37,46 @@ function NotificationItem({
   useEffect(() => {
     const timer = setTimeout(() => {
       onDismiss(notification.id)
-    }, 4000 + index * 500)
+    }, 3000 + index * 300)
     
     return () => clearTimeout(timer)
   }, [notification.id, index, onDismiss])
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: 100, scale: 0.9 }}
+      initial={{ opacity: 0, x: 50, scale: 0.8 }}
       animate={{ 
         opacity: 1, 
-        x: isNegative ? [0, -3, 3, -2, 2, 0] : 0, 
+        x: isNegative ? [0, -2, 2, -1, 1, 0] : 0, 
         scale: 1,
       }}
-      exit={{ opacity: 0, x: 100, scale: 0.9 }}
+      exit={{ opacity: 0, x: 50, scale: 0.8 }}
       transition={{ 
-        opacity: { type: "spring", damping: 20, delay: index * 0.1 },
-        scale: { type: "spring", damping: 20, delay: index * 0.1 },
+        opacity: { duration: 0.2 },
+        scale: { duration: 0.2 },
         x: isNegative 
-          ? { duration: 0.4, ease: "easeInOut", delay: index * 0.1 }
-          : { type: "spring", damping: 20, delay: index * 0.1 }
+          ? { duration: 0.3, ease: "easeInOut" }
+          : { duration: 0.2 }
       }}
-      className={`bg-card border rounded-xl p-3 shadow-lg ${
+      className={`bg-card/95 backdrop-blur-sm border rounded-lg p-2 shadow-lg max-w-[240px] ${
         isNegative ? "border-red-500/50" : "border-border"
       }`}
     >
-      <div className="flex items-start gap-3">
-        <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-          isNegative ? "bg-red-500/20" : "bg-secondary"
-        }`}>
-          {isNegative ? (
-            <AlertTriangle className="w-4 h-4 text-red-400" />
-          ) : (
-            <MessageCircle className="w-4 h-4 text-muted-foreground" />
-          )}
-        </div>
+      <div className="flex items-start gap-2">
+        {isNegative && (
+          <AlertTriangle className="w-3 h-3 text-red-400 shrink-0 mt-0.5" />
+        )}
         
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <span className={`text-sm font-medium ${isNegative ? "text-red-300" : "text-foreground"}`}>
+          <div className="flex items-center gap-1.5">
+            <span className={`text-xs font-medium truncate ${isNegative ? "text-red-300" : "text-foreground"}`}>
               {notification.username}
             </span>
-            <span className={`text-xs px-1.5 py-0.5 rounded ${config.bgColor} ${config.color}`}>
+            <span className={`text-[10px] px-1 py-0.5 rounded ${config.bgColor} ${config.color}`}>
               {getPersonalityLabel(lang, notification.personality)}
             </span>
           </div>
-          <p className={`text-sm mt-0.5 line-clamp-2 ${
+          <p className={`text-xs mt-0.5 line-clamp-1 ${
             isNegative ? "text-red-200/80" : "text-muted-foreground"
           }`}>
             {notification.content}
@@ -85,9 +85,9 @@ function NotificationItem({
 
         <button
           onClick={() => onDismiss(notification.id)}
-          className="text-muted-foreground hover:text-foreground transition-colors"
+          className="text-muted-foreground hover:text-foreground transition-colors p-0.5"
         >
-          <X className="w-4 h-4" />
+          <X className="w-3 h-3" />
         </button>
       </div>
     </motion.div>
@@ -95,15 +95,39 @@ function NotificationItem({
 }
 
 export function NotificationToast({ notifications, onDismiss, lang }: NotificationToastProps) {
+  // Track which notifications have been shown as toasts
+  const [toastIds, setToastIds] = useState<Set<string>>(new Set())
+  const [visibleToasts, setVisibleToasts] = useState<ToastNotification[]>([])
+
+  // Add new notifications as toasts
+  useEffect(() => {
+    const newToasts = notifications.filter(n => !toastIds.has(n.id))
+    if (newToasts.length > 0) {
+      setToastIds(prev => {
+        const next = new Set(prev)
+        newToasts.forEach(n => next.add(n.id))
+        return next
+      })
+      setVisibleToasts(prev => [
+        ...newToasts.map(comment => ({ id: comment.id, comment, dismissed: false })),
+        ...prev
+      ].slice(0, 4))
+    }
+  }, [notifications, toastIds])
+
+  const handleDismissToast = (id: string) => {
+    setVisibleToasts(prev => prev.filter(t => t.id !== id))
+  }
+
   return (
-    <div className="fixed top-4 right-4 z-50 space-y-2 max-w-sm">
+    <div className="fixed top-4 right-4 z-50 space-y-1.5">
       <AnimatePresence>
-        {notifications.slice(0, 5).map((notification, index) => (
+        {visibleToasts.slice(0, 4).map((toast, index) => (
           <NotificationItem
-            key={notification.id}
-            notification={notification}
+            key={toast.id}
+            notification={toast.comment}
             index={index}
-            onDismiss={onDismiss}
+            onDismiss={handleDismissToast}
             lang={lang}
           />
         ))}

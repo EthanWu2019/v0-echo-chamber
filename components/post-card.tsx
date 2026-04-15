@@ -1,10 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Heart, MessageCircle, Repeat2, Share, ChevronDown, ChevronUp, Eye } from "lucide-react"
 import type { Post } from "@/lib/types"
 import { CommentItem } from "./comment-item"
+import { AnimatedCounter } from "./animated-counter"
 import type { Language, Translations } from "@/lib/i18n"
 import { formatDistanceToNow } from "date-fns"
 import { zhCN, enUS } from "date-fns/locale"
@@ -16,6 +17,8 @@ interface PostCardProps {
   replyingCommentIds?: Set<string>
   lang: Language
   t: Translations
+  isOtherUser?: boolean
+  username?: string
 }
 
 export function PostCard({ 
@@ -24,22 +27,15 @@ export function PostCard({
   onDeleteComment,
   replyingCommentIds = new Set(), 
   lang, 
-  t 
+  t,
+  isOtherUser = false,
+  username
 }: PostCardProps) {
   const [expanded, setExpanded] = useState(true)
   const [liked, setLiked] = useState(false)
-  const [likeCount, setLikeCount] = useState(post.likes)
-  const [repostCount, setRepostCount] = useState(post.reposts)
-  const [viewCount, setViewCount] = useState(post.views)
+  const [localLikeBonus, setLocalLikeBonus] = useState(0)
 
   const dateLocale = lang === "zh" ? zhCN : enUS
-
-  // Sync external data changes with animation
-  useEffect(() => {
-    setLikeCount(post.likes)
-    setRepostCount(post.reposts)
-    setViewCount(post.views)
-  }, [post.likes, post.reposts, post.views])
 
   const handleReply = (commentId: string, content: string) => {
     onReplyToComment(post.id, commentId, content)
@@ -52,32 +48,24 @@ export function PostCard({
   const handleLike = () => {
     if (liked) {
       setLiked(false)
-      setLikeCount(prev => Math.max(0, prev - 1))
+      setLocalLikeBonus(0)
     } else {
       setLiked(true)
-      setLikeCount(prev => prev + 1)
+      setLocalLikeBonus(1)
     }
   }
 
   const negativeComments = post.comments.filter(c => c.sentimentImpact < 0 && !c.isTyping)
   const hasNegativeVibes = negativeComments.length >= 2
 
-  // Check if a comment is being replied to
   const isCommentReplying = (commentId: string): boolean => {
     return replyingCommentIds.has(commentId)
   }
 
-  // Number animation component
-  const AnimatedNumber = ({ value }: { value: number }) => (
-    <motion.span
-      key={value}
-      initial={{ y: -10, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ type: "spring", stiffness: 300, damping: 20 }}
-    >
-      {value}
-    </motion.span>
-  )
+  const displayUsername = username || t.me
+  const displayHandle = isOtherUser 
+    ? `@${displayUsername.toLowerCase().replace(/\s+/g, '_')}`
+    : t.myself
 
   return (
     <motion.article
@@ -91,12 +79,14 @@ export function PostCard({
       <div className="p-4">
         <div className="flex gap-3">
           <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 shrink-0 flex items-center justify-center">
-            <span className="text-white text-lg font-bold">U</span>
+            <span className="text-white text-lg font-bold">
+              {displayUsername.charAt(0).toUpperCase()}
+            </span>
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-foreground">{t.me}</span>
-              <span className="text-muted-foreground text-sm">{t.myself}</span>
+              <span className="font-semibold text-foreground">{displayUsername}</span>
+              <span className="text-muted-foreground text-sm">{displayHandle}</span>
               <span className="text-muted-foreground text-sm">·</span>
               <span className="text-muted-foreground text-sm">
                 {formatDistanceToNow(post.timestamp, { locale: dateLocale, addSuffix: true })}
@@ -115,13 +105,11 @@ export function PostCard({
             className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
           >
             <MessageCircle className="w-5 h-5" />
-            <span className="text-sm">{post.comments.filter(c => !c.isTyping).length}</span>
+            <AnimatedCounter value={post.comments.filter(c => !c.isTyping).length} className="text-sm" />
           </button>
           <button className="flex items-center gap-2 text-muted-foreground hover:text-green-400 transition-colors">
             <Repeat2 className="w-5 h-5" />
-            <span className="text-sm tabular-nums">
-              <AnimatedNumber value={repostCount} />
-            </span>
+            <AnimatedCounter value={post.reposts} className="text-sm" />
           </button>
           <button 
             onClick={handleLike}
@@ -135,15 +123,11 @@ export function PostCard({
             >
               <Heart className={`w-5 h-5 ${liked ? "fill-current" : ""}`} />
             </motion.div>
-            <span className="text-sm tabular-nums">
-              <AnimatedNumber value={likeCount} />
-            </span>
+            <AnimatedCounter value={post.likes + localLikeBonus} className="text-sm" />
           </button>
           <div className="flex items-center gap-2 text-muted-foreground">
             <Eye className="w-5 h-5" />
-            <span className="text-sm tabular-nums">
-              <AnimatedNumber value={viewCount} />
-            </span>
+            <AnimatedCounter value={post.views} className="text-sm" />
           </div>
           <button className="text-muted-foreground hover:text-foreground transition-colors">
             <Share className="w-5 h-5" />
