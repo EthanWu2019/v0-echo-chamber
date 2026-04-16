@@ -1,4 +1,4 @@
-export type PersonalityType = "hater" | "stan" | "logic-lord" | "moral-knight" | "spam-bot"
+export type PersonalityType = "hater" | "stan" | "logic-lord" | "moral-knight" | "spam-bot" | "normal"
 
 export interface Comment {
   id: string
@@ -83,6 +83,12 @@ export const PERSONALITY_CONFIG: Record<PersonalityType, {
     color: "text-gray-400", 
     bgColor: "bg-gray-500/20",
     avatarGradient: "from-green-500 to-teal-500"
+  },
+  "normal": { 
+    label: "路人", 
+    color: "text-slate-400", 
+    bgColor: "bg-slate-500/20",
+    avatarGradient: "from-slate-500 to-zinc-500"
   },
 }
 

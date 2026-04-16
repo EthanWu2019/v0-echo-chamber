@@ -12,6 +12,7 @@ interface TopicViewProps {
   onBack: () => void
   onReplyToComment: (postId: string, commentId: string, content: string) => void
   onDeleteComment?: (postId: string, commentId: string, personality: string, username: string) => void
+  onCommentOnPost?: (postId: string, content: string) => void
   replyingCommentIds?: Set<string>
   isLoading?: boolean
   lang: Language
@@ -24,6 +25,7 @@ export function TopicView({
   onBack, 
   onReplyToComment,
   onDeleteComment,
+  onCommentOnPost,
   replyingCommentIds = new Set(),
   isLoading,
   lang, 
@@ -80,6 +82,7 @@ export function TopicView({
                   post={post}
                   onReplyToComment={onReplyToComment}
                   onDeleteComment={onDeleteComment}
+                  onCommentOnPost={onCommentOnPost}
                   replyingCommentIds={replyingCommentIds}
                   lang={lang}
                   t={t}

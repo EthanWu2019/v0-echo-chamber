@@ -62,7 +62,6 @@ export function PostCard({
     if (commentText.trim() && onCommentOnPost) {
       onCommentOnPost(post.id, commentText.trim())
       setCommentText("")
-      setShowCommentInput(false)
     }
   }
 

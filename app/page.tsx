@@ -453,7 +453,7 @@ export default function EchoChamberPage() {
     return topicPost?.content || ""
   }, [posts, otherUserPosts, topicPosts])
 
-  // Handle comment on other user's post
+  // Handle comment on any post
   const handleCommentOnPost = useCallback(async (postId: string, content: string) => {
     const userComment: Comment = {
       id: generateId(),
@@ -470,10 +470,17 @@ export default function EchoChamberPage() {
     }
 
     // Determine which post list to update
+    const isUserPost = posts.some(p => p.id === postId)
     const isOtherUserPost = otherUserPosts.some(p => p.id === postId)
     const isTopicPost = topicPosts.some(p => p.id === postId)
     
-    if (isOtherUserPost) {
+    // Add user's comment immediately
+    if (isUserPost) {
+      setPosts(prev => prev.map(p => {
+        if (p.id !== postId) return p
+        return { ...p, comments: [...p.comments, userComment] }
+      }))
+    } else if (isOtherUserPost) {
       setOtherUserPosts(prev => prev.map(p => {
         if (p.id !== postId) return p
         return { ...p, comments: [...p.comments, userComment] }
@@ -493,7 +500,12 @@ export default function EchoChamberPage() {
       await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 1500))
       const aiReply = responseToComment(responses[0])
       
-      if (isOtherUserPost) {
+      if (isUserPost) {
+        setPosts(prev => prev.map(p => {
+          if (p.id !== postId) return p
+          return { ...p, comments: [...p.comments, aiReply] }
+        }))
+      } else if (isOtherUserPost) {
         setOtherUserPosts(prev => prev.map(p => {
           if (p.id !== postId) return p
           return { ...p, comments: [...p.comments, aiReply] }
@@ -510,7 +522,7 @@ export default function EchoChamberPage() {
         addNotification(aiReply)
       }
     }
-  }, [t.me, otherUserPosts, topicPosts, getPostContent, lang, responseToComment, handleSentimentChange, addNotification])
+  }, [t.me, posts, otherUserPosts, topicPosts, getPostContent, lang, responseToComment, handleSentimentChange, addNotification])
 
   // Handle reply
   const handleReplyToComment = useCallback(async (
@@ -828,6 +840,7 @@ export default function EchoChamberPage() {
               onBack={() => setSelectedTopic(null)}
               onReplyToComment={handleReplyToComment}
               onDeleteComment={handleDeleteComment}
+              onCommentOnPost={handleCommentOnPost}
               replyingCommentIds={replyingCommentIds}
               isLoading={isLoadingTopicPosts}
               lang={lang}

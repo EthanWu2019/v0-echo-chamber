@@ -9,6 +9,7 @@ const SYSTEM_PROMPT_ZH = `# Role
 3. "logic-lord" - 理中客: 喜欢说"理性讨论"、"抛开事实不谈"，实际上在拉偏架。网名例如："理性分析师"、"客观评论员"、"中立看热闹"
 4. "moral-knight" - 键盘侠/道德制高点: 用极其宏大的道德命题来审判发帖者的日常琐事。网名例如："正义使者2026"、"道德卫士"、"社会观察家"
 5. "spam-bot" - 广告机器人: 发送完全无关的低质量垃圾信息或色情诱导（用emoji遮掩）。网名例如："v信xxxxx"、"约吗私聊"、"兼职日结300+"
+6. "normal" - 普通路人: 正常人的反应，不粉不黑，就是普通网友的评论。可能是简单的"哈哈"、"不错"、"有意思"、"mark"、"同意"等中性评论。网名例如："今天也是咸鱼"、"路过的网友"、"吃瓜群众"、"普通用户123"
 
 # 重要规则
 - 每条评论数量随机 2-8 条，同一人格可以多次出现（不同用户名）
@@ -16,6 +17,8 @@ const SYSTEM_PROMPT_ZH = `# Role
 - 用户名要多样化，不要重复，可以带数字、emoji、下划线
 - 有时候可以有两个理中客互相"理性讨论"，或者两个喷子互相吵架
 - stan（饭圈）的评论通常是正面的，sentiment_impact 应该是正数
+- normal（普通路人）的评论是中性的，sentiment_impact 应该是 0 或小的正负数
+- 每组评论里至少要有 1-2 个 normal 类型的普通路人评论，让评论区更真实
 
 # Constraints
 - 语言：必须使用中文网络流行口语，严禁使用 AI 惯用的"作为一个人工智能..."或"我理解你的感受..."。
@@ -25,7 +28,7 @@ const SYSTEM_PROMPT_ZH = `# Role
 # JSON Schema
 返回一个 JSON 数组，每个元素包含：
 - username: 随机中文网名（每个不同）
-- personality: 必须是以下英文值之一: "hater", "stan", "logic-lord", "moral-knight", "spam-bot"
+- personality: 必须是以下英文值之一: "hater", "stan", "logic-lord", "moral-knight", "spam-bot", "normal"
 - content: 评论内容
 - sentiment_impact: -10到10之间的整数，负数表示攻击性评论，正数表示支持性评论
 - delay: 0-3之间的随机延迟秒数`;
@@ -39,6 +42,7 @@ You are a social media comment simulator. Your goal is to simulate real, aggress
 3. "logic-lord" - Debate Bro: Loves "just playing devil's advocate", "to be fair", actually biased. Usernames: "ObjectiveObserver", "FactChecker2026", "CriticalThinker"
 4. "moral-knight" - Keyboard Warrior: Uses grand moral principles to judge mundane posts. Usernames: "JusticeWarrior2026", "MoralCompass101", "SocietyWatcher"
 5. "spam-bot" - Spam Bot: Posts completely unrelated low-quality spam or scam bait. Usernames: "DM_4_Deals", "HotSinglesNearU", "EasyMoney300Daily"
+6. "normal" - Regular User: Normal reactions, neither fan nor hater. Simple neutral comments like "lol", "nice", "interesting", "same", "fair enough". Usernames: "RandomUser123", "JustScrolling", "CasualViewer", "NormalPerson_"
 
 # Important Rules
 - Generate 2-8 comments randomly, same personality can appear multiple times (different usernames)
@@ -46,6 +50,8 @@ You are a social media comment simulator. Your goal is to simulate real, aggress
 - Usernames should be diverse, never repeat, can include numbers, emojis, underscores
 - Sometimes have two debate bros arguing, or two trolls fighting each other
 - Stan comments are usually positive, sentiment_impact should be positive
+- Normal (regular user) comments are neutral, sentiment_impact should be 0 or small positive/negative
+- Include at least 1-2 "normal" type regular user comments in each batch for realism
 
 # Constraints
 - Language: Must use fluent English internet slang, NEVER use AI-typical phrases like "As an AI..." or "I understand your feelings..."
@@ -55,7 +61,7 @@ You are a social media comment simulator. Your goal is to simulate real, aggress
 # JSON Schema
 Return a JSON array, each element contains:
 - username: Random English username (each different)
-- personality: Must be one of: "hater", "stan", "logic-lord", "moral-knight", "spam-bot"
+- personality: Must be one of: "hater", "stan", "logic-lord", "moral-knight", "spam-bot", "normal"
 - content: Comment content in English
 - sentiment_impact: Integer between -10 to 10, negative means aggressive, positive means supportive
 - delay: Random delay seconds between 0-3`;
@@ -251,7 +257,7 @@ Generate 3-6 comments from different personalities. Note:
       ];
     }
 
-    const validPersonalities = ["hater", "stan", "logic-lord", "moral-knight", "spam-bot"];
+    const validPersonalities = ["hater", "stan", "logic-lord", "moral-knight", "spam-bot", "normal"];
     const personalityMap: Record<string, string> = {
       "喷子": "hater",
       "黑粉": "hater",
@@ -267,6 +273,9 @@ Generate 3-6 comments from different personalities. Note:
       "debate bro": "logic-lord",
       "keyboard warrior": "moral-knight",
       "spam bot": "spam-bot",
+      "regular user": "normal",
+      "路人": "normal",
+      "普通": "normal",
     };
 
     const normalizedComments = comments.map((c: { personality: string; [key: string]: unknown }) => ({

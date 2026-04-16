@@ -77,6 +77,7 @@ export const translations = {
       "logic-lord": "理中客",
       "moral-knight": "键盘侠",
       "spam-bot": "广告",
+      "normal": "路人",
     },
     
     // Disclaimer
@@ -196,6 +197,7 @@ export const translations = {
       "logic-lord": "Debate Bro",
       "moral-knight": "Keyboard Warrior",
       "spam-bot": "Spam Bot",
+      "normal": "Regular User",
     },
     
     // Disclaimer
