@@ -1,5 +1,16 @@
 "use client"
 
+// TypeScript declarations for View Transitions API
+declare global {
+  interface Document {
+    startViewTransition?: (callback: () => void) => ViewTransition
+  }
+  interface ViewTransition {
+    ready: Promise<void>
+    finished: Promise<void>
+  }
+}
+
 import { useState, useCallback, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Sidebar } from "@/components/sidebar"
@@ -323,39 +334,60 @@ export default function EchoChamberPage() {
   }, [lang])
 
   // Theme toggle with view transition
-  const handleThemeToggle = useCallback((event?: React.MouseEvent) => {
-    const x = event?.clientX ?? window.innerWidth / 2
-    const y = event?.clientY ?? window.innerHeight / 2
-    const endRadius = Math.hypot(
-      Math.max(x, window.innerWidth - x),
-      Math.max(y, window.innerHeight - y)
+  const isAnimatingRef = useRef(false)
+  
+  const handleThemeToggle = useCallback((e?: React.MouseEvent) => {
+    if (isAnimatingRef.current) return
+
+    // Get click coordinates as circle center
+    const x = e?.clientX ?? window.innerWidth / 2
+    const y = e?.clientY ?? window.innerHeight / 2
+    const w = window.innerWidth
+    const h = window.innerHeight
+    
+    // Calculate max radius to cover entire screen from click position
+    const maxRadius = Math.ceil(
+      Math.sqrt(Math.max(x, w - x) ** 2 + Math.max(y, h - y) ** 2)
     )
+
+    const newIsDark = !isDarkMode
 
     // Check if View Transitions API is supported
     if (document.startViewTransition) {
+      isAnimatingRef.current = true
+
+      // Start View Transition
       const transition = document.startViewTransition(() => {
-        setIsDarkMode(prev => !prev)
-        document.documentElement.classList.toggle("dark")
+        document.documentElement.classList.remove("dark", "light")
+        document.documentElement.classList.add(newIsDark ? "dark" : "light")
+        setIsDarkMode(newIsDark)
       })
 
+      // When transition is ready, execute clip-path animation
       transition.ready.then(() => {
-        const clipPath = isDarkMode
-          ? [`circle(0px at ${x}px ${y}px)`, `circle(${endRadius}px at ${x}px ${y}px)`]
-          : [`circle(${endRadius}px at ${x}px ${y}px)`, `circle(0px at ${x}px ${y}px)`]
-
         document.documentElement.animate(
-          { clipPath },
+          {
+            clipPath: [
+              `circle(0px at ${x}px ${y}px)`,
+              `circle(${maxRadius}px at ${x}px ${y}px)`,
+            ],
+          },
           {
             duration: 500,
-            easing: "ease-in-out",
-            pseudoElement: isDarkMode ? "::view-transition-new(root)" : "::view-transition-old(root)",
+            easing: "cubic-bezier(0.25, 0.46, 0.45, 0.94)",
+            pseudoElement: "::view-transition-new(root)",
           }
         )
       })
+
+      transition.finished.then(() => {
+        isAnimatingRef.current = false
+      })
     } else {
       // Fallback for browsers without View Transitions API
-      setIsDarkMode(prev => !prev)
-      document.documentElement.classList.toggle("dark")
+      document.documentElement.classList.remove("dark", "light")
+      document.documentElement.classList.add(newIsDark ? "dark" : "light")
+      setIsDarkMode(newIsDark)
     }
   }, [isDarkMode])
 

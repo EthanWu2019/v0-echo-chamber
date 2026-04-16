@@ -124,25 +124,27 @@
   }
 }
 
-/* View Transition for Theme Toggle */
+/* View Transitions API - theme toggle circle reveal */
 ::view-transition-old(root),
 ::view-transition-new(root) {
-  animation: none;
+  animation: none !important;
   mix-blend-mode: normal;
 }
 
+/* New view on top: it expands as a circle, revealing the new theme */
+::view-transition-new(root) {
+  z-index: 9999;
+}
+
+/* Old view underneath: the screenshot of the previous theme */
 ::view-transition-old(root) {
   z-index: 1;
 }
 
-::view-transition-new(root) {
-  z-index: 9999;
+::view-transition-group(root) {
+  animation: none;
 }
 
-.dark::view-transition-old(root) {
-  z-index: 9999;
-}
-
-.dark::view-transition-new(root) {
-  z-index: 1;
+::view-transition-image-pair(root) {
+  isolation: auto;
 }
