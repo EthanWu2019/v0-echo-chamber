@@ -15,11 +15,13 @@ interface PostCardProps {
   onReplyToComment: (postId: string, commentId: string, content: string) => void
   onDeleteComment?: (postId: string, commentId: string, personality: string, username: string) => void
   onCommentOnPost?: (postId: string, content: string) => void
+  onPinComment?: (postId: string, commentId: string) => void
   replyingCommentIds?: Set<string>
   lang: Language
   t: Translations
   isOtherUser?: boolean
   username?: string
+  autoExpand?: boolean
 }
 
 export function PostCard({ 
@@ -27,13 +29,15 @@ export function PostCard({
   onReplyToComment, 
   onDeleteComment,
   onCommentOnPost,
+  onPinComment,
   replyingCommentIds = new Set(), 
   lang, 
   t,
   isOtherUser = false,
-  username
+  username,
+  autoExpand = false
 }: PostCardProps) {
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpanded] = useState(autoExpand)
   const [liked, setLiked] = useState(false)
   const [localLikeBonus, setLocalLikeBonus] = useState(0)
   const [commentText, setCommentText] = useState("")
@@ -65,8 +69,26 @@ export function PostCard({
     }
   }
 
+  const handlePinComment = (commentId: string) => {
+    onPinComment?.(post.id, commentId)
+  }
+
   const negativeComments = post.comments.filter(c => c.sentimentImpact < 0 && !c.isTyping)
   const hasNegativeVibes = negativeComments.length >= 2
+
+  // Sort comments: pinned first, then user's own comments, then by time
+  const sortedComments = [...post.comments].sort((a, b) => {
+    // Pinned comment first
+    if (a.id === post.pinnedCommentId) return -1
+    if (b.id === post.pinnedCommentId) return 1
+    // User's own comments second
+    const aIsOwn = a.username === t.me
+    const bIsOwn = b.username === t.me
+    if (aIsOwn && !bIsOwn) return -1
+    if (!aIsOwn && bIsOwn) return 1
+    // Then by timestamp (newest first for own, oldest first for others)
+    return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+  })
 
   const isCommentReplying = (commentId: string): boolean => {
     return replyingCommentIds.has(commentId)
@@ -189,16 +211,19 @@ export function PostCard({
               )}
               
               <AnimatePresence>
-                {post.comments.map((comment) => (
+                {sortedComments.map((comment) => (
                   <CommentItem
                     key={comment.id}
                     comment={comment}
                     onReply={handleReply}
                     onDelete={handleDelete}
+                    onPin={!isOtherUser ? handlePinComment : undefined}
                     isReplying={isCommentReplying(comment.id)}
                     lang={lang}
                     t={t}
                     isOwnComment={comment.username === t.me}
+                    isOwnPost={!isOtherUser}
+                    isPinned={comment.id === post.pinnedCommentId}
                   />
                 ))}
               </AnimatePresence>

@@ -1,6 +1,6 @@
 "use client"
 
-import { Home, Bell, User, Radio, Globe } from "lucide-react"
+import { Home, Bell, User, Radio, Globe, Sun, Moon } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import type { Language, Translations } from "@/lib/i18n"
 
@@ -11,6 +11,8 @@ interface SidebarProps {
   lang: Language
   t: Translations
   onLanguageSwitch: () => void
+  isDarkMode: boolean
+  onThemeToggle: (event?: React.MouseEvent) => void
 }
 
 export function Sidebar({ 
@@ -19,7 +21,9 @@ export function Sidebar({
   activeNav, 
   lang,
   t,
-  onLanguageSwitch 
+  onLanguageSwitch,
+  isDarkMode,
+  onThemeToggle
 }: SidebarProps) {
   const navItems = [
     { icon: Home, label: t.home, key: "home" },
@@ -83,8 +87,42 @@ export function Sidebar({
         ))}
       </nav>
 
-      {/* Language Switch Button */}
-      <div className="mb-4">
+      {/* Theme and Language Buttons */}
+      <div className="mb-4 space-y-2">
+        {/* Theme Toggle */}
+        <button
+          onClick={(e) => onThemeToggle(e)}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-muted-foreground hover:bg-secondary/50 hover:text-foreground transition-all"
+        >
+          <AnimatePresence mode="wait">
+            {isDarkMode ? (
+              <motion.div
+                key="moon"
+                initial={{ rotate: -90, opacity: 0 }}
+                animate={{ rotate: 0, opacity: 1 }}
+                exit={{ rotate: 90, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <Moon className="w-6 h-6" />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="sun"
+                initial={{ rotate: 90, opacity: 0 }}
+                animate={{ rotate: 0, opacity: 1 }}
+                exit={{ rotate: -90, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <Sun className="w-6 h-6" />
+              </motion.div>
+            )}
+          </AnimatePresence>
+          <span className="text-base font-medium">
+            {isDarkMode ? t.darkMode : t.lightMode}
+          </span>
+        </button>
+        
+        {/* Language Switch */}
         <button
           onClick={onLanguageSwitch}
           className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-muted-foreground hover:bg-secondary/50 hover:text-foreground transition-all"

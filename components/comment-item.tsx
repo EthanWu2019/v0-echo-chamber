@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Heart, MessageCircle, MoreHorizontal, Repeat2, Trash2 } from "lucide-react"
+import { Heart, MessageCircle, MoreHorizontal, Repeat2, Trash2, Pin, PinOff } from "lucide-react"
 import type { Comment } from "@/lib/types"
 import { PERSONALITY_CONFIG, getAvatarInitials } from "@/lib/types"
 import type { Language, Translations } from "@/lib/i18n"
@@ -14,22 +14,28 @@ interface CommentItemProps {
   comment: Comment
   onReply: (commentId: string, content: string) => void
   onDelete?: (commentId: string, personality: string, username: string) => void
+  onPin?: (commentId: string) => void
   depth?: number
   isReplying?: boolean
   lang: Language
   t: Translations
   isOwnComment?: boolean
+  isOwnPost?: boolean
+  isPinned?: boolean
 }
 
 export function CommentItem({ 
   comment, 
   onReply, 
   onDelete,
+  onPin,
   depth = 0, 
   isReplying = false, 
   lang, 
   t,
-  isOwnComment = false
+  isOwnComment = false,
+  isOwnPost = false,
+  isPinned = false
 }: CommentItemProps) {
   const [showReplyInput, setShowReplyInput] = useState(false)
   const [replyContent, setReplyContent] = useState("")
@@ -101,6 +107,11 @@ export function CommentItem({
     onDelete?.(comment.id, comment.personality, comment.username)
   }
 
+  const handlePin = () => {
+    setShowMenu(false)
+    onPin?.(comment.id)
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, x: isNegative ? -20 : 0, y: 10 }}
@@ -143,6 +154,12 @@ export function CommentItem({
             <div className="flex-1 min-w-0">
               {/* Header */}
               <div className="flex items-center gap-2 flex-wrap">
+                {isPinned && (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 flex items-center gap-1">
+                    <Pin className="w-3 h-3" />
+                    {t.pinned}
+                  </span>
+                )}
                 <span className={`font-medium text-sm ${isNegative ? "text-red-300" : "text-foreground"}`}>
                   {comment.username}
                 </span>
@@ -214,6 +231,16 @@ export function CommentItem({
                         exit={{ opacity: 0, scale: 0.9 }}
                         className="absolute right-0 top-6 bg-card border border-border rounded-lg shadow-lg z-10 py-1 min-w-[100px]"
                       >
+                        {/* Pin option - only for own posts, depth 0 comments, and own comments */}
+                        {isOwnPost && depth === 0 && isOwnComment && onPin && (
+                          <button
+                            onClick={handlePin}
+                            className="w-full px-3 py-2 text-left text-sm text-blue-400 hover:bg-secondary flex items-center gap-2"
+                          >
+                            {isPinned ? <PinOff className="w-4 h-4" /> : <Pin className="w-4 h-4" />}
+                            {isPinned ? t.unpin : t.pin}
+                          </button>
+                        )}
                         <button
                           onClick={handleDelete}
                           className="w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-secondary flex items-center gap-2"

@@ -111,6 +111,19 @@ export const translations = {
     
     // Comment
     addComment: "写下你的评论...",
+    pin: "置顶",
+    unpin: "取消置顶",
+    pinned: "已置顶",
+    
+    // Confirm
+    confirmLanguageSwitch: "确定要切换语言吗？",
+    confirmLanguageSwitchDesc: "切换语言后，所有帖子和会话记录将被清空",
+    confirm: "确定",
+    cancel: "取消",
+    
+    // Theme
+    darkMode: "深色模式",
+    lightMode: "浅色模式",
     
     // Trending topics
     trendingItems: [
@@ -231,6 +244,19 @@ export const translations = {
     
     // Comment
     addComment: "Add a comment...",
+    pin: "Pin",
+    unpin: "Unpin",
+    pinned: "Pinned",
+    
+    // Confirm
+    confirmLanguageSwitch: "Switch language?",
+    confirmLanguageSwitchDesc: "All posts and conversations will be cleared",
+    confirm: "Confirm",
+    cancel: "Cancel",
+    
+    // Theme
+    darkMode: "Dark Mode",
+    lightMode: "Light Mode",
     
     // Trending topics
     trendingItems: [

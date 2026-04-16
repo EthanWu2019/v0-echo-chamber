@@ -25,6 +25,8 @@ export interface Post {
   views: number
   comments: Comment[]
   isGenerating?: boolean
+  pinnedCommentId?: string  // 置顶评论的ID
+  username?: string  // 发帖者用户名
 }
 
 export interface AICommentResponse {

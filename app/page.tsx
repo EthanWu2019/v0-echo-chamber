@@ -12,6 +12,7 @@ import { ScrollToTop } from "@/components/scroll-to-top"
 import { AccountWidget } from "@/components/account-widget"
 import { ProfileStats } from "@/components/profile-stats"
 import { TopicView } from "@/components/topic-view"
+import { ConfirmDialog } from "@/components/confirm-dialog"
 import type { Post, Comment, AICommentResponse, AccountStats } from "@/lib/types"
 import { PERSONALITY_CONFIG, getAvatarInitials } from "@/lib/types"
 import { translations, type Language } from "@/lib/i18n"
@@ -174,6 +175,8 @@ export default function EchoChamberPage() {
   const [topicPostsCache, setTopicPostsCache] = useState<Record<string, Post[]>>({})
   const [isLoadingTopicPosts, setIsLoadingTopicPosts] = useState(false)
   const [otherUserPosts, setOtherUserPosts] = useState<Post[]>([])
+  const [showLanguageConfirm, setShowLanguageConfirm] = useState(false)
+  const [isDarkMode, setIsDarkMode] = useState(true)
   
   const otherPostTimerRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -289,8 +292,13 @@ export default function EchoChamberPage() {
     }
   }, [posts.length, lang, responseToComment, otherUserPosts.length])
 
-  // Language switch
-  const handleLanguageSwitch = useCallback(() => {
+  // Language switch - show confirmation first
+  const handleLanguageSwitchClick = useCallback(() => {
+    setShowLanguageConfirm(true)
+  }, [])
+
+  const handleLanguageSwitchConfirm = useCallback(() => {
+    setShowLanguageConfirm(false)
     const newLang = lang === "zh" ? "en" : "zh"
     setLang(newLang)
     setPosts([])
@@ -313,6 +321,43 @@ export default function EchoChamberPage() {
     const cachedTopics = getRandomTopics(newLang, 5)
     setTrendingTopics(cachedTopics.map(t => ({ tag: t.tag, count: t.count, hot: t.hot })))
   }, [lang])
+
+  // Theme toggle with view transition
+  const handleThemeToggle = useCallback((event?: React.MouseEvent) => {
+    const x = event?.clientX ?? window.innerWidth / 2
+    const y = event?.clientY ?? window.innerHeight / 2
+    const endRadius = Math.hypot(
+      Math.max(x, window.innerWidth - x),
+      Math.max(y, window.innerHeight - y)
+    )
+
+    // Check if View Transitions API is supported
+    if (document.startViewTransition) {
+      const transition = document.startViewTransition(() => {
+        setIsDarkMode(prev => !prev)
+        document.documentElement.classList.toggle("dark")
+      })
+
+      transition.ready.then(() => {
+        const clipPath = isDarkMode
+          ? [`circle(0px at ${x}px ${y}px)`, `circle(${endRadius}px at ${x}px ${y}px)`]
+          : [`circle(${endRadius}px at ${x}px ${y}px)`, `circle(0px at ${x}px ${y}px)`]
+
+        document.documentElement.animate(
+          { clipPath },
+          {
+            duration: 500,
+            easing: "ease-in-out",
+            pseudoElement: isDarkMode ? "::view-transition-new(root)" : "::view-transition-old(root)",
+          }
+        )
+      })
+    } else {
+      // Fallback for browsers without View Transitions API
+      setIsDarkMode(prev => !prev)
+      document.documentElement.classList.toggle("dark")
+    }
+  }, [isDarkMode])
 
   // Sentiment change
   const handleSentimentChange = useCallback((impact: number) => {
@@ -455,8 +500,9 @@ export default function EchoChamberPage() {
 
   // Handle comment on any post
   const handleCommentOnPost = useCallback(async (postId: string, content: string) => {
+    const userCommentId = generateId()
     const userComment: Comment = {
-      id: generateId(),
+      id: userCommentId,
       username: t.me,
       avatar: t.me.charAt(0).toUpperCase(),
       personality: "stan",
@@ -474,25 +520,25 @@ export default function EchoChamberPage() {
     const isOtherUserPost = otherUserPosts.some(p => p.id === postId)
     const isTopicPost = topicPosts.some(p => p.id === postId)
     
-    // Add user's comment immediately
+    // Add user's comment immediately at the beginning (will be sorted later)
     if (isUserPost) {
       setPosts(prev => prev.map(p => {
         if (p.id !== postId) return p
-        return { ...p, comments: [...p.comments, userComment] }
+        return { ...p, comments: [userComment, ...p.comments] }
       }))
     } else if (isOtherUserPost) {
       setOtherUserPosts(prev => prev.map(p => {
         if (p.id !== postId) return p
-        return { ...p, comments: [...p.comments, userComment] }
+        return { ...p, comments: [userComment, ...p.comments] }
       }))
     } else if (isTopicPost) {
       setTopicPosts(prev => prev.map(p => {
         if (p.id !== postId) return p
-        return { ...p, comments: [...p.comments, userComment] }
+        return { ...p, comments: [userComment, ...p.comments] }
       }))
     }
 
-    // Generate AI reply
+    // Generate AI reply - should be nested under user's comment
     const postContent = getPostContent(postId)
     const responses = await fetchAIComments(content, lang, true, "", postContent, content)
     
@@ -500,20 +546,30 @@ export default function EchoChamberPage() {
       await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 1500))
       const aiReply = responseToComment(responses[0])
       
+      // Helper to add reply to user's comment (nested)
+      const addReplyToComment = (comments: Comment[]): Comment[] => {
+        return comments.map(c => {
+          if (c.id === userCommentId) {
+            return { ...c, replies: [...c.replies, aiReply] }
+          }
+          return c
+        })
+      }
+      
       if (isUserPost) {
         setPosts(prev => prev.map(p => {
           if (p.id !== postId) return p
-          return { ...p, comments: [...p.comments, aiReply] }
+          return { ...p, comments: addReplyToComment(p.comments) }
         }))
       } else if (isOtherUserPost) {
         setOtherUserPosts(prev => prev.map(p => {
           if (p.id !== postId) return p
-          return { ...p, comments: [...p.comments, aiReply] }
+          return { ...p, comments: addReplyToComment(p.comments) }
         }))
       } else if (isTopicPost) {
         setTopicPosts(prev => prev.map(p => {
           if (p.id !== postId) return p
-          return { ...p, comments: [...p.comments, aiReply] }
+          return { ...p, comments: addReplyToComment(p.comments) }
         }))
       }
 
@@ -713,6 +769,16 @@ export default function EchoChamberPage() {
     }
   }, [t.me, posts, otherUserPosts, topicPosts, getPostContent, lang, responseToComment, handleSentimentChange, addNotification])
 
+  // Handle pin comment
+  const handlePinComment = useCallback((postId: string, commentId: string) => {
+    setPosts(prev => prev.map(p => {
+      if (p.id !== postId) return p
+      // Toggle pin - if already pinned, unpin; otherwise pin this one
+      const newPinnedId = p.pinnedCommentId === commentId ? undefined : commentId
+      return { ...p, pinnedCommentId: newPinnedId }
+    }))
+  }, [])
+
   // Dismiss toast notification (doesn't affect all notifications)
   const dismissToastNotification = useCallback((id: string) => {
     setToastNotifications(prev => prev.filter(n => n.id !== id))
@@ -816,7 +882,9 @@ export default function EchoChamberPage() {
           activeNav={activeNav}
           lang={lang}
           t={t}
-          onLanguageSwitch={handleLanguageSwitch}
+          onLanguageSwitch={handleLanguageSwitchClick}
+          isDarkMode={isDarkMode}
+          onThemeToggle={handleThemeToggle}
         />
       </div>
 
@@ -870,11 +938,13 @@ export default function EchoChamberPage() {
                         onReplyToComment={handleReplyToComment}
                         onDeleteComment={handleDeleteComment}
                         onCommentOnPost={handleCommentOnPost}
+                        onPinComment={!isOtherUser ? handlePinComment : undefined}
                         replyingCommentIds={replyingCommentIds}
                         lang={lang}
                         t={t}
                         isOtherUser={isOtherUser}
                         username={(post as Post & { username?: string }).username}
+                        autoExpand={!isOtherUser && post.comments.length > 0}
                       />
                     )
                   })}
@@ -1001,9 +1071,12 @@ export default function EchoChamberPage() {
                         post={post}
                         onReplyToComment={handleReplyToComment}
                         onDeleteComment={handleDeleteComment}
+                        onCommentOnPost={handleCommentOnPost}
+                        onPinComment={handlePinComment}
                         replyingCommentIds={replyingCommentIds}
                         lang={lang}
                         t={t}
+                        autoExpand={post.comments.length > 0}
                       />
                     ))}
                   </div>
@@ -1029,6 +1102,16 @@ export default function EchoChamberPage() {
           />
         </div>
       </aside>
+
+      {/* Language Switch Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showLanguageConfirm}
+        title={t.confirmLanguageSwitch}
+        description={t.confirmLanguageSwitchDesc}
+        onConfirm={handleLanguageSwitchConfirm}
+        onCancel={() => setShowLanguageConfirm(false)}
+        t={t}
+      />
     </div>
   )
 }
