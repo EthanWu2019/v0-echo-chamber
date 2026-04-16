@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Heart, MessageCircle, Share, ChevronDown, ChevronUp, Eye, Send } from "lucide-react"
+import { Heart, MessageCircle, ChevronDown, ChevronUp, Eye, Send } from "lucide-react"
 import type { Post } from "@/lib/types"
 import { CommentItem } from "./comment-item"
 import { AnimatedCounter } from "./animated-counter"
@@ -113,13 +113,7 @@ export function PostCard({
         {/* Post Actions */}
         <div className="flex items-center justify-between mt-4 pt-3 border-t border-border">
           <button 
-            onClick={() => {
-              if (isOtherUser && onCommentOnPost) {
-                setShowCommentInput(!showCommentInput)
-              } else {
-                setExpanded(!expanded)
-              }
-            }}
+            onClick={() => setShowCommentInput(!showCommentInput)}
             className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
           >
             <MessageCircle className="w-5 h-5" />
@@ -143,15 +137,12 @@ export function PostCard({
             <Eye className="w-5 h-5" />
             <AnimatedCounter value={post.views} className="text-sm" />
           </div>
-          <button className="text-muted-foreground hover:text-foreground transition-colors">
-            <Share className="w-5 h-5" />
-          </button>
         </div>
       </div>
 
-      {/* Comment Input for Other Users' Posts */}
+      {/* Comment Input */}
       <AnimatePresence>
-        {showCommentInput && isOtherUser && onCommentOnPost && (
+        {showCommentInput && onCommentOnPost && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}

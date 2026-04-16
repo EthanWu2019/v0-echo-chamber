@@ -856,7 +856,7 @@ export default function EchoChamberPage() {
                         post={post}
                         onReplyToComment={handleReplyToComment}
                         onDeleteComment={handleDeleteComment}
-                        onCommentOnPost={isOtherUser ? handleCommentOnPost : undefined}
+                        onCommentOnPost={handleCommentOnPost}
                         replyingCommentIds={replyingCommentIds}
                         lang={lang}
                         t={t}
