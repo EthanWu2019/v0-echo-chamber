@@ -356,6 +356,12 @@ export default function EchoChamberPage() {
     if (document.startViewTransition) {
       isAnimatingRef.current = true
 
+      // Set transition direction attribute BEFORE starting transition
+      document.documentElement.setAttribute(
+        "data-theme-transition", 
+        newIsDark ? "to-dark" : "to-light"
+      )
+
       // Start View Transition
       const transition = document.startViewTransition(() => {
         document.documentElement.classList.remove("dark", "light")
@@ -391,6 +397,7 @@ export default function EchoChamberPage() {
 
       transition.finished.then(() => {
         isAnimatingRef.current = false
+        document.documentElement.removeAttribute("data-theme-transition")
       })
     } else {
       // Fallback for browsers without View Transitions API

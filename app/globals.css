@@ -131,7 +131,15 @@
   mix-blend-mode: normal;
 }
 
-/* Default: new view on top (for light mode reveal) */
+::view-transition-group(root) {
+  animation: none;
+}
+
+::view-transition-image-pair(root) {
+  isolation: auto;
+}
+
+/* Default: new view on top (for expanding to light mode) */
 ::view-transition-new(root) {
   z-index: 9999;
 }
@@ -140,19 +148,11 @@
   z-index: 1;
 }
 
-/* When switching to dark mode, old view should be on top (it will shrink to reveal dark) */
-.dark::view-transition-old(root) {
+/* When transitioning to dark, old view on top (shrinking light to reveal dark) */
+[data-theme-transition="to-dark"]::view-transition-old(root) {
   z-index: 9999;
 }
 
-.dark::view-transition-new(root) {
+[data-theme-transition="to-dark"]::view-transition-new(root) {
   z-index: 1;
-}
-
-::view-transition-group(root) {
-  animation: none;
-}
-
-::view-transition-image-pair(root) {
-  isolation: auto;
 }
