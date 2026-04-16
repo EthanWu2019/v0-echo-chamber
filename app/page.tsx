@@ -391,6 +391,7 @@ export default function EchoChamberPage() {
             pseudoElement: newIsDark
               ? "::view-transition-old(root)"
               : "::view-transition-new(root)",
+            fill: "both",
           }
         )
       })
