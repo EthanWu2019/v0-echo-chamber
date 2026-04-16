@@ -33,10 +33,9 @@ export function PostCard({
   isOtherUser = false,
   username
 }: PostCardProps) {
-  const [expanded, setExpanded] = useState(true)
+  const [expanded, setExpanded] = useState(false)
   const [liked, setLiked] = useState(false)
   const [localLikeBonus, setLocalLikeBonus] = useState(0)
-  const [showCommentInput, setShowCommentInput] = useState(false)
   const [commentText, setCommentText] = useState("")
 
   const dateLocale = lang === "zh" ? zhCN : enUS
@@ -113,10 +112,12 @@ export function PostCard({
         {/* Post Actions */}
         <div className="flex items-center justify-between mt-4 pt-3 border-t border-border">
           <button 
-            onClick={() => setShowCommentInput(!showCommentInput)}
-            className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+            onClick={() => setExpanded(!expanded)}
+            className={`flex items-center gap-2 transition-colors ${
+              expanded ? "text-primary" : "text-muted-foreground hover:text-foreground"
+            }`}
           >
-            <MessageCircle className="w-5 h-5" />
+            <MessageCircle className={`w-5 h-5 ${expanded ? "fill-primary/20" : ""}`} />
             <AnimatedCounter value={post.comments.filter(c => !c.isTyping).length} className="text-sm" />
           </button>
           <button 
@@ -140,50 +141,41 @@ export function PostCard({
         </div>
       </div>
 
-      {/* Comment Input */}
-      <AnimatePresence>
-        {showCommentInput && onCommentOnPost && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="border-t border-border"
-          >
-            <div className="p-4 flex gap-3">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 shrink-0 flex items-center justify-center">
-                <span className="text-white text-sm font-bold">U</span>
-              </div>
-              <div className="flex-1 flex gap-2">
-                <input
-                  type="text"
-                  value={commentText}
-                  onChange={(e) => setCommentText(e.target.value)}
-                  placeholder={t.addComment || "Add a comment..."}
-                  className="flex-1 bg-secondary/50 rounded-full px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-primary/20"
-                  onKeyDown={(e) => e.key === "Enter" && handleSubmitComment()}
-                />
-                <button
-                  onClick={handleSubmitComment}
-                  disabled={!commentText.trim()}
-                  className="p-2 rounded-full bg-primary text-primary-foreground disabled:opacity-50 hover:bg-primary/90 transition-colors"
-                >
-                  <Send className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Comments Section */}
       <AnimatePresence>
-        {expanded && post.comments.length > 0 && (
+        {expanded && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             className="border-t border-border"
           >
+            {/* Comment Input */}
+            {onCommentOnPost && (
+              <div className="p-4 flex gap-3 border-b border-border">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 shrink-0 flex items-center justify-center">
+                  <span className="text-white text-sm font-bold">U</span>
+                </div>
+                <div className="flex-1 flex gap-2">
+                  <input
+                    type="text"
+                    value={commentText}
+                    onChange={(e) => setCommentText(e.target.value)}
+                    placeholder={t.addComment || "Add a comment..."}
+                    className="flex-1 bg-secondary/50 rounded-full px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-primary/20"
+                    onKeyDown={(e) => e.key === "Enter" && handleSubmitComment()}
+                  />
+                  <button
+                    onClick={handleSubmitComment}
+                    disabled={!commentText.trim()}
+                    className="p-2 rounded-full bg-primary text-primary-foreground disabled:opacity-50 hover:bg-primary/90 transition-colors"
+                  >
+                    <Send className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="p-4 space-y-2">
               {/* Generating indicator */}
               {post.isGenerating && (

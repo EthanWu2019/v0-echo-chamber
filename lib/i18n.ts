@@ -106,6 +106,7 @@ export const translations = {
     
     // Topic
     back: "返回",
+    loadingTopicPosts: "正在加载热门话题帖子...",
     
     // Comment
     addComment: "写下你的评论...",
@@ -224,6 +225,7 @@ export const translations = {
     
     // Topic
     back: "Back",
+    loadingTopicPosts: "Loading trending topic posts...",
     
     // Comment
     addComment: "Add a comment...",

@@ -59,8 +59,9 @@ export function TopicView({
 
       {/* Loading State */}
       {isLoading && (
-        <div className="flex items-center justify-center py-12">
+        <div className="flex flex-col items-center justify-center py-12 gap-3">
           <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">{t.loadingTopicPosts || "Loading posts..."}</p>
         </div>
       )}
 
