@@ -365,17 +365,26 @@ export default function EchoChamberPage() {
 
       // When transition is ready, execute clip-path animation
       transition.ready.then(() => {
-        document.documentElement.animate(
-          {
-            clipPath: [
+        // Dark -> Light: circle expands from click point (animate new view)
+        // Light -> Dark: circle contracts to click point (animate old view in reverse)
+        const clipPathFrames = newIsDark
+          ? [
+              `circle(${maxRadius}px at ${x}px ${y}px)`,
+              `circle(0px at ${x}px ${y}px)`,
+            ]
+          : [
               `circle(0px at ${x}px ${y}px)`,
               `circle(${maxRadius}px at ${x}px ${y}px)`,
-            ],
-          },
+            ]
+
+        document.documentElement.animate(
+          { clipPath: clipPathFrames },
           {
             duration: 500,
             easing: "cubic-bezier(0.25, 0.46, 0.45, 0.94)",
-            pseudoElement: "::view-transition-new(root)",
+            pseudoElement: newIsDark
+              ? "::view-transition-old(root)"
+              : "::view-transition-new(root)",
           }
         )
       })
