@@ -6,12 +6,25 @@ export const translations = {
     home: "首页",
     notifications: "通知",
     profile: "个人主页",
+    messages: "私信",
+    achievements: "成就",
+    storyMode: "剧情模式",
     
     // Post box
     postPlaceholder: "在想什么？发条动态试试...",
     postButton: "广播",
     friendlyReminder: "请友善互动喵~ 文明发言，从我做起",
     catEmoji: "(=^･ω･^=)",
+    addImage: "添加图片",
+    addPoll: "发起投票",
+    
+    // Poll
+    pollQuestion: "投票问题",
+    pollOption: "选项",
+    addOption: "添加选项",
+    createPoll: "创建投票",
+    votesCount: "票",
+    pollEnded: "投票已结束",
     
     // Feed
     noPostsYet: "还没有动态",
@@ -21,6 +34,14 @@ export const translations = {
     noNotifications: "暂无通知",
     notificationsHint: "发布动态后，这里会显示收到的评论通知",
     commentedOnYourPost: "评论了你的动态",
+    mentionedYou: "在话题中@了你",
+    
+    // DM - Direct Messages
+    directMessages: "私信",
+    noDMs: "暂无私信",
+    dmHint: "发布动态后可能会收到陌生人的私信",
+    newMessage: "新消息",
+    markAllRead: "全部已读",
     
     // Profile
     simulatedUser: "模拟用户",
@@ -31,6 +52,8 @@ export const translations = {
     followers: "粉丝",
     myPosts: "我的动态",
     noPostsPublished: "还没有发布任何动态",
+    dayCount: "运营第",
+    days: "天",
     
     // Sentiment Widget
     publicSentiment: "全网好感度",
@@ -64,6 +87,24 @@ export const translations = {
     collapseComments: "收起评论",
     expandComments: "展开更多评论",
     usersTyping: "网友们正在输入...",
+    
+    // Report & Block
+    report: "举报",
+    block: "拉黑",
+    reported: "已举报",
+    blocked: "已拉黑",
+    reportReceived: "举报已收到",
+    reportDesc: "我们会尽快处理您的举报",
+    blockSuccess: "已将该用户拉黑",
+    blockDesc: "但ta可能会换个马甲继续评论哦~",
+    userBlocked: "该用户已被拉黑",
+    
+    // Repost
+    repost: "转发",
+    reposted: "已转发",
+    repostBy: "转发自",
+    quoteRepost: "引用转发",
+    repostComment: "说点什么...",
     
     // Time
     justNow: "刚刚",
@@ -125,6 +166,33 @@ export const translations = {
     darkMode: "深色模式",
     lightMode: "浅色模式",
     
+    // Achievements
+    achievementsTitle: "成就徽章",
+    achievementUnlocked: "解锁成就",
+    noAchievements: "还没有解锁任何成就",
+    achievementHint: "继续互动来解锁更多成就吧！",
+    
+    // Story Mode
+    storyModeTitle: "剧情模式",
+    storyModeDesc: "选择一个场景，体验特定情境下的舆论风暴",
+    startScenario: "开始挑战",
+    difficulty: "难度",
+    difficultyEasy: "简单",
+    difficultyMedium: "中等",
+    difficultyHard: "困难",
+    exitStoryMode: "退出剧情模式",
+    
+    // Sentiment Analysis
+    sentimentAnalysis: "舆情分析",
+    sentimentTrend: "情感走势",
+    hotWords: "热词云",
+    heatCurve: "热度曲线",
+    
+    // Relationship
+    relationshipMap: "关系图谱",
+    fansNetwork: "粉丝网络",
+    hatersNetwork: "黑粉网络",
+    
     // Trending topics
     trendingItems: [
       { tag: "今天也想辞职", count: "12.3万", hot: true },
@@ -139,12 +207,25 @@ export const translations = {
     home: "Home",
     notifications: "Notifications",
     profile: "Profile",
+    messages: "Messages",
+    achievements: "Achievements",
+    storyMode: "Story Mode",
     
     // Post box
     postPlaceholder: "What's on your mind? Share something...",
     postButton: "Post",
     friendlyReminder: "Please be kind and respectful~",
     catEmoji: ":3",
+    addImage: "Add Image",
+    addPoll: "Create Poll",
+    
+    // Poll
+    pollQuestion: "Poll Question",
+    pollOption: "Option",
+    addOption: "Add Option",
+    createPoll: "Create Poll",
+    votesCount: "votes",
+    pollEnded: "Poll ended",
     
     // Feed
     noPostsYet: "No posts yet",
@@ -154,6 +235,14 @@ export const translations = {
     noNotifications: "No notifications",
     notificationsHint: "Comment notifications will appear here after you post",
     commentedOnYourPost: "commented on your post",
+    mentionedYou: "mentioned you in a topic",
+    
+    // DM - Direct Messages
+    directMessages: "Direct Messages",
+    noDMs: "No messages",
+    dmHint: "You may receive DMs from strangers after posting",
+    newMessage: "New message",
+    markAllRead: "Mark all read",
     
     // Profile
     simulatedUser: "Simulated User",
@@ -164,6 +253,8 @@ export const translations = {
     followers: "Followers",
     myPosts: "My Posts",
     noPostsPublished: "No posts published yet",
+    dayCount: "Day",
+    days: "",
     
     // Sentiment Widget
     publicSentiment: "Public Sentiment",
@@ -197,6 +288,24 @@ export const translations = {
     collapseComments: "Collapse comments",
     expandComments: "Show more comments",
     usersTyping: "People are typing...",
+    
+    // Report & Block
+    report: "Report",
+    block: "Block",
+    reported: "Reported",
+    blocked: "Blocked",
+    reportReceived: "Report received",
+    reportDesc: "We'll review your report shortly",
+    blockSuccess: "User blocked",
+    blockDesc: "But they might come back with a new account~",
+    userBlocked: "This user is blocked",
+    
+    // Repost
+    repost: "Repost",
+    reposted: "Reposted",
+    repostBy: "Reposted from",
+    quoteRepost: "Quote Repost",
+    repostComment: "Add a comment...",
     
     // Time
     justNow: "just now",
@@ -257,6 +366,33 @@ export const translations = {
     // Theme
     darkMode: "Dark Mode",
     lightMode: "Light Mode",
+    
+    // Achievements
+    achievementsTitle: "Achievements",
+    achievementUnlocked: "Achievement Unlocked",
+    noAchievements: "No achievements unlocked yet",
+    achievementHint: "Keep interacting to unlock more achievements!",
+    
+    // Story Mode
+    storyModeTitle: "Story Mode",
+    storyModeDesc: "Choose a scenario to experience a specific online storm",
+    startScenario: "Start Challenge",
+    difficulty: "Difficulty",
+    difficultyEasy: "Easy",
+    difficultyMedium: "Medium",
+    difficultyHard: "Hard",
+    exitStoryMode: "Exit Story Mode",
+    
+    // Sentiment Analysis
+    sentimentAnalysis: "Sentiment Analysis",
+    sentimentTrend: "Sentiment Trend",
+    hotWords: "Word Cloud",
+    heatCurve: "Heat Curve",
+    
+    // Relationship
+    relationshipMap: "Relationship Map",
+    fansNetwork: "Fans Network",
+    hatersNetwork: "Haters Network",
     
     // Trending topics
     trendingItems: [

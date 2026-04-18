@@ -24,8 +24,14 @@ import { AccountWidget } from "@/components/account-widget"
 import { ProfileStats } from "@/components/profile-stats"
 import { TopicView } from "@/components/topic-view"
 import { ConfirmDialog } from "@/components/confirm-dialog"
-import type { Post, Comment, AICommentResponse, AccountStats } from "@/lib/types"
-import { PERSONALITY_CONFIG, getAvatarInitials } from "@/lib/types"
+import { DMPanel } from "@/components/dm-panel"
+import { AchievementsPanel, AchievementToast } from "@/components/achievements-panel"
+import { StoryModePanel } from "@/components/story-mode-panel"
+import { ScreenEffects, useScreenShake } from "@/components/screen-effects"
+import { SentimentAnalysis } from "@/components/sentiment-analysis"
+import { useSoundEffects } from "@/hooks/use-sound-effects"
+import type { Post, Comment, AICommentResponse, AccountStats, DirectMessage, BlockedUser, Achievement, Poll, StoryScenario, Mention } from "@/lib/types"
+import { PERSONALITY_CONFIG, getAvatarInitials, ACHIEVEMENTS, generateNewUsername } from "@/lib/types"
 import { translations, type Language } from "@/lib/i18n"
 import { getPersonalityLabel } from "@/lib/i18n"
 import { 
@@ -189,7 +195,30 @@ export default function EchoChamberPage() {
   const [showLanguageConfirm, setShowLanguageConfirm] = useState(false)
   const [isDarkMode, setIsDarkMode] = useState(true)
   
+  // New feature states
+  const [directMessages, setDirectMessages] = useState<DirectMessage[]>([])
+  const [showDMPanel, setShowDMPanel] = useState(false)
+  const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([])
+  const [reportedComments, setReportedComments] = useState<Set<string>>(new Set())
+  const [unlockedAchievements, setUnlockedAchievements] = useState<Achievement[]>([])
+  const [showAchievementsPanel, setShowAchievementsPanel] = useState(false)
+  const [newAchievement, setNewAchievement] = useState<Achievement | null>(null)
+  const [showStoryModePanel, setShowStoryModePanel] = useState(false)
+  const [activeStoryScenario, setActiveStoryScenario] = useState<StoryScenario | null>(null)
+  const [dayCount, setDayCount] = useState(1)
+  const [sentimentHistory, setSentimentHistory] = useState<number[]>([75, 75, 75, 75, 75])
+  const [heatHistory, setHeatHistory] = useState<number[]>([0, 0, 0, 0, 0])
+  const [hotWords, setHotWords] = useState<{ word: string; count: number; sentiment: "positive" | "negative" | "neutral" }[]>([])
+  const [showNegativeFlash, setShowNegativeFlash] = useState(false)
+  const [mentions, setMentions] = useState<Mention[]>([])
+  const [soundEnabled, setSoundEnabled] = useState(true)
+  const [firstFlamed, setFirstFlamed] = useState(false)
+  const [sentimentCrashed, setSentimentCrashed] = useState(false)
+  const [sentimentRecovered, setSentimentRecovered] = useState(false)
+  
   const otherPostTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const { playSound } = useSoundEffects(soundEnabled)
+  const { triggerShake } = useScreenShake()
 
   const t = translations[lang]
   const accountStats = calculateAccountStats(posts, sentiment, totalNegativeComments, contentSentimentBonus)
@@ -223,6 +252,151 @@ export default function EchoChamberPage() {
   useEffect(() => {
     setFollowerHistory(prev => [...prev.slice(1), accountStats.followers])
   }, [accountStats.followers])
+
+  // Track sentiment history
+  useEffect(() => {
+    setSentimentHistory(prev => [...prev.slice(-11), sentiment])
+    
+    // Check for sentiment crash/recovery
+    if (sentiment < 30 && !sentimentCrashed) {
+      setSentimentCrashed(true)
+    }
+    if (sentimentCrashed && sentiment > 70 && !sentimentRecovered) {
+      setSentimentRecovered(true)
+    }
+  }, [sentiment, sentimentCrashed, sentimentRecovered])
+
+  // Update heat history based on activity
+  useEffect(() => {
+    const totalActivity = posts.reduce((sum, p) => sum + p.comments.length + p.likes, 0)
+    setHeatHistory(prev => [...prev.slice(-19), totalActivity])
+  }, [posts])
+
+  // Generate DMs periodically
+  useEffect(() => {
+    if (posts.length === 0) return
+
+    const generateDM = () => {
+      const dmContents = lang === "zh" ? [
+        { content: "你好，能认识一下吗？", personality: "stan" as const },
+        { content: "看了你的帖子，我觉得你说得很有道理", personality: "normal" as const },
+        { content: "你是不是有病啊？发这种东西", personality: "hater" as const },
+        { content: "我是你的粉丝，能加个好友吗？", personality: "stan" as const },
+        { content: "我代表正义来审判你", personality: "moral-knight" as const },
+        { content: "加微信吗？有事商量", personality: "spam-bot" as const },
+      ] : [
+        { content: "Hey, can we chat?", personality: "stan" as const },
+        { content: "Saw your post, you make a good point", personality: "normal" as const },
+        { content: "What is wrong with you? Posting this stuff", personality: "hater" as const },
+        { content: "I'm a big fan, can we be friends?", personality: "stan" as const },
+        { content: "I'm here to pass judgment on you", personality: "moral-knight" as const },
+        { content: "DM me for business opportunity", personality: "spam-bot" as const },
+      ]
+
+      const randomDM = dmContents[Math.floor(Math.random() * dmContents.length)]
+      const config = PERSONALITY_CONFIG[randomDM.personality]
+      
+      const names = lang === "zh" 
+        ? ["小明", "网友A", "正义哥", "小粉丝", "路人甲", "广告商"]
+        : ["John", "UserA", "JusticeGuy", "FanBoy", "RandomGuy", "AdBot"]
+      
+      const newDM: DirectMessage = {
+        id: generateId(),
+        from: names[Math.floor(Math.random() * names.length)] + Math.floor(Math.random() * 1000),
+        personality: randomDM.personality,
+        content: randomDM.content,
+        timestamp: new Date(),
+        isRead: false
+      }
+
+      setDirectMessages(prev => [newDM, ...prev].slice(0, 20))
+      playSound("notification")
+    }
+
+    // First DM after 1 minute
+    const firstDMTimer = setTimeout(generateDM, 60000)
+    // Then every 2-5 minutes
+    const dmInterval = setInterval(generateDM, 120000 + Math.random() * 180000)
+
+    return () => {
+      clearTimeout(firstDMTimer)
+      clearInterval(dmInterval)
+    }
+  }, [posts.length, lang, playSound])
+
+  // Check achievements
+  useEffect(() => {
+    const checkStats = {
+      totalPosts: posts.length,
+      totalComments: posts.reduce((sum, p) => sum + p.comments.length, 0),
+      totalNegativeComments,
+      sentiment,
+      followers: accountStats.followers,
+      haters: accountStats.haters,
+      blockedUsers: blockedUsers.length,
+      reportedComments: reportedComments.size,
+      daysActive: dayCount,
+      firstFlamed,
+      sentimentCrashed,
+      sentimentRecovered
+    }
+
+    const unlockedIds = new Set(unlockedAchievements.map(a => a.id))
+    
+    for (const achievement of ACHIEVEMENTS) {
+      if (!unlockedIds.has(achievement.id) && achievement.condition(checkStats)) {
+        const achievementWithTime = { ...achievement, unlockedAt: new Date() }
+        setUnlockedAchievements(prev => [...prev, achievementWithTime])
+        setNewAchievement(achievementWithTime)
+        playSound("achievement")
+        
+        // Auto dismiss after 5 seconds
+        setTimeout(() => setNewAchievement(null), 5000)
+        break // Only unlock one at a time
+      }
+    }
+  }, [posts, totalNegativeComments, sentiment, accountStats, blockedUsers, reportedComments, dayCount, firstFlamed, sentimentCrashed, sentimentRecovered, unlockedAchievements, playSound])
+
+  // Day counter - increments with each post
+  useEffect(() => {
+    setDayCount(Math.floor(posts.length / 3) + 1)
+  }, [posts.length])
+
+  // Extract hot words from comments
+  useEffect(() => {
+    const wordCounts = new Map<string, { count: number; sentiment: "positive" | "negative" | "neutral" }>()
+    
+    const negativeWordsSet = new Set(lang === "zh" 
+      ? ["烦", "累", "讨厌", "恶心", "傻", "蠢", "垃圾", "滚", "骂", "怒", "愤怒", "失望", "无语", "崩溃", "丧", "烂"]
+      : ["hate", "angry", "annoyed", "frustrated", "sad", "terrible", "awful", "stupid", "damn", "trash", "toxic"]
+    )
+    
+    const positiveWordsSet = new Set(lang === "zh"
+      ? ["开心", "快乐", "感谢", "幸福", "爱", "喜欢", "成功", "棒", "好", "可爱", "优秀"]
+      : ["happy", "love", "thanks", "amazing", "wonderful", "beautiful", "great", "awesome"]
+    )
+
+    posts.forEach(post => {
+      post.comments.forEach(comment => {
+        const words = comment.content.split(/[\s,，。！？!?\n]+/).filter(w => w.length > 1 && w.length < 10)
+        words.forEach(word => {
+          const lowerWord = word.toLowerCase()
+          const existing = wordCounts.get(lowerWord) || { count: 0, sentiment: "neutral" as const }
+          let sentiment: "positive" | "negative" | "neutral" = "neutral"
+          if (negativeWordsSet.has(lowerWord)) sentiment = "negative"
+          else if (positiveWordsSet.has(lowerWord)) sentiment = "positive"
+          wordCounts.set(lowerWord, { count: existing.count + 1, sentiment })
+        })
+      })
+    })
+
+    const sortedWords = Array.from(wordCounts.entries())
+      .sort((a, b) => b[1].count - a[1].count)
+      .slice(0, 15)
+      .map(([word, data]) => ({ word, ...data }))
+
+    setHotWords(sortedWords)
+  }, [posts, lang])
 
   // Screen effects
   useEffect(() => {
@@ -428,7 +602,7 @@ export default function EchoChamberPage() {
   }, [])
 
   // Handle new post with review process
-  const handlePost = useCallback(async (content: string) => {
+  const handlePost = useCallback(async (content: string, imageUrl?: string, poll?: Poll) => {
     setIsPosting(true)
     setReviewPhase("reviewing")
     setReviewProgress(0)
@@ -474,6 +648,8 @@ export default function EchoChamberPage() {
       views: Math.floor(Math.random() * 20) + 5,
       comments: [],
       isGenerating: true,
+      imageUrl,
+      poll,
     }
 
     setPosts(prev => [newPost, ...prev])
@@ -525,6 +701,11 @@ export default function EchoChamberPage() {
 
         if (response.sentiment_impact < 0) {
           addNotification(comment)
+          playSound("negative")
+          setShowNegativeFlash(true)
+          triggerShake()
+          setTimeout(() => setShowNegativeFlash(false), 300)
+          if (!firstFlamed) setFirstFlamed(true)
         }
       }
     } catch {
@@ -822,11 +1003,121 @@ export default function EchoChamberPage() {
   const handlePinComment = useCallback((postId: string, commentId: string) => {
     setPosts(prev => prev.map(p => {
       if (p.id !== postId) return p
-      // Toggle pin - if already pinned, unpin; otherwise pin this one
       const newPinnedId = p.pinnedCommentId === commentId ? undefined : commentId
       return { ...p, pinnedCommentId: newPinnedId }
     }))
   }, [])
+
+  // Handle report comment
+  const handleReportComment = useCallback((postId: string, commentId: string, username: string) => {
+    setReportedComments(prev => new Set(prev).add(commentId))
+    // Show toast notification
+    playSound("notification")
+  }, [playSound])
+
+  // Handle block user - they will come back with a new username
+  const handleBlockUser = useCallback((username: string, personality: string) => {
+    const newUsername = generateNewUsername(username, lang)
+    setBlockedUsers(prev => [...prev, {
+      username,
+      personality: personality as any,
+      blockedAt: new Date(),
+      newUsername
+    }])
+    playSound("notification")
+    
+    // After a delay, the blocked user might come back with a new name
+    setTimeout(() => {
+      // Generate a comeback comment from the blocked user with new name
+      const comebackComments = lang === "zh" 
+        ? [`换个号继续！`, `你以为拉黑我有用？`, `我又回来了`, `拉黑？小场面`]
+        : [`Back with a new account!`, `You thought blocking me would work?`, `I'm back!`, `Block me? Cute.`]
+      
+      const comebackContent = comebackComments[Math.floor(Math.random() * comebackComments.length)]
+      
+      // Add to a random post
+      if (posts.length > 0) {
+        const randomPost = posts[Math.floor(Math.random() * posts.length)]
+        const comebackComment: Comment = {
+          id: generateId(),
+          username: newUsername,
+          avatar: getAvatarInitials(newUsername),
+          personality: personality as any,
+          personalityLabel: getPersonalityLabel(lang, personality),
+          content: comebackContent,
+          sentimentImpact: -5,
+          likes: 0,
+          reposts: 0,
+          timestamp: new Date(),
+          replies: [],
+        }
+        
+        setPosts(prev => prev.map(p => {
+          if (p.id !== randomPost.id) return p
+          return { ...p, comments: [...p.comments, comebackComment] }
+        }))
+        
+        handleSentimentChange(-5)
+        addNotification(comebackComment)
+        playSound("negative")
+      }
+    }, 30000 + Math.random() * 30000) // 30-60 seconds later
+  }, [lang, posts, handleSentimentChange, addNotification, playSound])
+
+  // Handle vote on poll
+  const handleVotePoll = useCallback((postId: string, optionIndex: number) => {
+    setPosts(prev => prev.map(p => {
+      if (p.id !== postId || !p.poll) return p
+      const newOptions = p.poll.options.map((opt, i) => ({
+        ...opt,
+        votes: i === optionIndex ? opt.votes + 1 : opt.votes
+      }))
+      const totalVotes = newOptions.reduce((sum, opt) => sum + opt.votes, 0)
+      const optionsWithPercentage = newOptions.map(opt => ({
+        ...opt,
+        percentage: Math.round((opt.votes / totalVotes) * 100)
+      }))
+      return {
+        ...p,
+        poll: {
+          ...p.poll,
+          options: optionsWithPercentage,
+          totalVotes,
+          userVotedIndex: optionIndex
+        }
+      }
+    }))
+  }, [])
+
+  // Handle repost
+  const handleRepost = useCallback((postId: string, comment?: string) => {
+    const originalPost = posts.find(p => p.id === postId) || otherUserPosts.find(p => p.id === postId)
+    if (!originalPost) return
+
+    const repost: Post = {
+      id: generateId(),
+      content: comment || "",
+      timestamp: new Date(),
+      likes: 0,
+      reposts: 0,
+      views: Math.floor(Math.random() * 10) + 5,
+      comments: [],
+      repostOf: {
+        username: originalPost.username || t.me,
+        content: originalPost.content,
+        postId: originalPost.id
+      }
+    }
+
+    setPosts(prev => [repost, ...prev])
+    
+    // Update original post repost count
+    const updateRepostCount = (postsList: Post[]) => postsList.map(p => 
+      p.id === postId ? { ...p, reposts: p.reposts + 1 } : p
+    )
+    setPosts(updateRepostCount)
+    setOtherUserPosts(updateRepostCount)
+  }, [posts, otherUserPosts, t.me])
 
   // Dismiss toast notification (doesn't affect all notifications)
   const dismissToastNotification = useCallback((id: string) => {
@@ -926,7 +1217,8 @@ export default function EchoChamberPage() {
       {/* Sidebar */}
       <div className="fixed left-0 top-0 h-screen">
         <Sidebar 
-          notificationCount={notificationCount} 
+          notificationCount={notificationCount}
+          dmCount={directMessages.filter(m => !m.isRead).length}
           onNavClick={handleNavClick}
           activeNav={activeNav}
           lang={lang}
@@ -934,6 +1226,10 @@ export default function EchoChamberPage() {
           onLanguageSwitch={handleLanguageSwitchClick}
           isDarkMode={isDarkMode}
           onThemeToggle={handleThemeToggle}
+          onOpenDM={() => setShowDMPanel(true)}
+          onOpenAchievements={() => setShowAchievementsPanel(true)}
+          onOpenStoryMode={() => setShowStoryModePanel(true)}
+          dayCount={dayCount}
         />
       </div>
 
@@ -988,7 +1284,12 @@ export default function EchoChamberPage() {
                         onDeleteComment={handleDeleteComment}
                         onCommentOnPost={handleCommentOnPost}
                         onPinComment={!isOtherUser ? handlePinComment : undefined}
+                        onReportComment={handleReportComment}
+                        onBlockUser={handleBlockUser}
+                        onVotePoll={handleVotePoll}
+                        onRepost={handleRepost}
                         replyingCommentIds={replyingCommentIds}
+                        blockedUsers={blockedUsers}
                         lang={lang}
                         t={t}
                         isOtherUser={isOtherUser}
@@ -1122,7 +1423,12 @@ export default function EchoChamberPage() {
                         onDeleteComment={handleDeleteComment}
                         onCommentOnPost={handleCommentOnPost}
                         onPinComment={handlePinComment}
+                        onReportComment={handleReportComment}
+                        onBlockUser={handleBlockUser}
+                        onVotePoll={handleVotePoll}
+                        onRepost={handleRepost}
                         replyingCommentIds={replyingCommentIds}
+                        blockedUsers={blockedUsers}
                         lang={lang}
                         t={t}
                         autoExpand={post.comments.length > 0}
@@ -1141,6 +1447,13 @@ export default function EchoChamberPage() {
         <div className="p-6 space-y-6">
           <SentimentWidget sentiment={sentiment} trend={sentimentTrend} t={t} />
           <AccountWidget stats={accountStats} t={t} />
+          <SentimentAnalysis
+            sentimentHistory={sentimentHistory}
+            hotWords={hotWords}
+            heatHistory={heatHistory}
+            t={t}
+            lang={lang}
+          />
           <TrendingWidget 
             t={t} 
             lang={lang}
@@ -1160,6 +1473,59 @@ export default function EchoChamberPage() {
         onConfirm={handleLanguageSwitchConfirm}
         onCancel={() => setShowLanguageConfirm(false)}
         t={t}
+      />
+
+      {/* DM Panel */}
+      <DMPanel
+        isOpen={showDMPanel}
+        onClose={() => setShowDMPanel(false)}
+        messages={directMessages}
+        onMarkAllRead={() => setDirectMessages(prev => prev.map(m => ({ ...m, isRead: true })))}
+        onDeleteMessage={(id) => setDirectMessages(prev => prev.filter(m => m.id !== id))}
+        t={t}
+        lang={lang}
+      />
+
+      {/* Achievements Panel */}
+      <AchievementsPanel
+        isOpen={showAchievementsPanel}
+        onClose={() => setShowAchievementsPanel(false)}
+        unlockedAchievements={unlockedAchievements}
+        t={t}
+        lang={lang}
+      />
+
+      {/* Achievement Toast */}
+      <AnimatePresence>
+        {newAchievement && (
+          <AchievementToast
+            achievement={newAchievement}
+            onClose={() => setNewAchievement(null)}
+            lang={lang}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Story Mode Panel */}
+      <StoryModePanel
+        isOpen={showStoryModePanel}
+        onClose={() => setShowStoryModePanel(false)}
+        onStartScenario={(scenario) => {
+          setActiveStoryScenario(scenario)
+          setShowStoryModePanel(false)
+          // Auto-post the scenario's initial post
+          const initialContent = lang === "zh" ? scenario.initialPost.zh : scenario.initialPost.en
+          handlePost(initialContent)
+        }}
+        t={t}
+        lang={lang}
+      />
+
+      {/* Screen Effects */}
+      <ScreenEffects
+        isLowSentiment={isLowSentiment}
+        isCritical={sentiment < 20}
+        showFlash={showNegativeFlash}
       />
     </div>
   )

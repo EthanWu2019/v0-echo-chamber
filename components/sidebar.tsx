@@ -1,11 +1,12 @@
 "use client"
 
-import { Home, Bell, User, Radio, Globe, Sun, Moon } from "lucide-react"
+import { Home, Bell, User, Radio, Globe, Sun, Moon, Mail, Trophy, Zap } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import type { Language, Translations } from "@/lib/i18n"
 
 interface SidebarProps {
   notificationCount: number
+  dmCount?: number
   onNavClick?: (label: string) => void
   activeNav?: string
   lang: Language
@@ -13,28 +14,43 @@ interface SidebarProps {
   onLanguageSwitch: () => void
   isDarkMode: boolean
   onThemeToggle: (event?: React.MouseEvent) => void
+  onOpenDM?: () => void
+  onOpenAchievements?: () => void
+  onOpenStoryMode?: () => void
+  dayCount?: number
 }
 
 export function Sidebar({ 
-  notificationCount, 
+  notificationCount,
+  dmCount = 0,
   onNavClick, 
   activeNav, 
   lang,
   t,
   onLanguageSwitch,
   isDarkMode,
-  onThemeToggle
+  onThemeToggle,
+  onOpenDM,
+  onOpenAchievements,
+  onOpenStoryMode,
+  dayCount = 1
 }: SidebarProps) {
   const navItems = [
     { icon: Home, label: t.home, key: "home" },
-    { icon: Bell, label: t.notifications, hasNotification: true, key: "notifications" },
+    { icon: Bell, label: t.notifications, hasNotification: true, notifCount: notificationCount, key: "notifications" },
     { icon: User, label: t.profile, key: "profile" },
+  ]
+
+  const actionItems = [
+    { icon: Mail, label: t.messages, onClick: onOpenDM, count: dmCount },
+    { icon: Trophy, label: t.achievements, onClick: onOpenAchievements },
+    { icon: Zap, label: t.storyMode, onClick: onOpenStoryMode },
   ]
   
   return (
     <aside className="fixed left-0 top-0 h-screen w-64 border-r border-border bg-card p-6 flex flex-col">
       {/* Logo */}
-      <div className="flex items-center gap-3 mb-10">
+      <div className="flex items-center gap-3 mb-6">
         <div className="relative">
           <Radio className="w-8 h-8 text-red-500" />
           <motion.div
@@ -46,6 +62,14 @@ export function Sidebar({
         <span className="text-xl font-bold bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text text-transparent">
           EchoChamber
         </span>
+      </div>
+
+      {/* Day Counter */}
+      <div className="mb-6 px-4 py-2 bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-lg border border-purple-500/20">
+        <p className="text-xs text-muted-foreground">{t.dayCount}</p>
+        <p className="text-2xl font-bold text-purple-400">
+          {dayCount} <span className="text-sm font-normal text-muted-foreground">{t.days}</span>
+        </p>
       </div>
 
       {/* Navigation */}
@@ -63,7 +87,7 @@ export function Sidebar({
             <div className="relative">
               <item.icon className="w-6 h-6" />
               <AnimatePresence>
-                {item.hasNotification && notificationCount > 0 && (
+                {item.hasNotification && item.notifCount && item.notifCount > 0 && (
                   <motion.div
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
@@ -76,11 +100,39 @@ export function Sidebar({
                       transition={{ duration: 1, repeat: Infinity }}
                     />
                     <span className="text-xs font-bold text-white relative z-10">
-                      {notificationCount > 9 ? "9+" : notificationCount}
+                      {item.notifCount > 9 ? "9+" : item.notifCount}
                     </span>
                   </motion.div>
                 )}
               </AnimatePresence>
+            </div>
+            <span className="text-base font-medium">{item.label}</span>
+          </button>
+        ))}
+
+        {/* Divider */}
+        <div className="my-4 border-t border-border" />
+
+        {/* Action Items */}
+        {actionItems.map((item, index) => (
+          <button
+            key={index}
+            onClick={item.onClick}
+            className="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-muted-foreground hover:bg-secondary/50 hover:text-foreground transition-all"
+          >
+            <div className="relative">
+              <item.icon className="w-6 h-6" />
+              {item.count && item.count > 0 && (
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center"
+                >
+                  <span className="text-[10px] font-bold text-white">
+                    {item.count > 9 ? "9+" : item.count}
+                  </span>
+                </motion.div>
+              )}
             </div>
             <span className="text-base font-medium">{item.label}</span>
           </button>

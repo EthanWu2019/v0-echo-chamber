@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Heart, MessageCircle, MoreHorizontal, Repeat2, Trash2, Pin, PinOff } from "lucide-react"
+import { Heart, MessageCircle, MoreHorizontal, Repeat2, Trash2, Pin, PinOff, Flag, Ban } from "lucide-react"
 import type { Comment } from "@/lib/types"
 import { PERSONALITY_CONFIG, getAvatarInitials } from "@/lib/types"
 import type { Language, Translations } from "@/lib/i18n"
@@ -15,6 +15,8 @@ interface CommentItemProps {
   onReply: (commentId: string, content: string) => void
   onDelete?: (commentId: string, personality: string, username: string) => void
   onPin?: (commentId: string) => void
+  onReport?: (commentId: string, username: string) => void
+  onBlock?: (username: string, personality: string) => void
   depth?: number
   isReplying?: boolean
   lang: Language
@@ -22,6 +24,7 @@ interface CommentItemProps {
   isOwnComment?: boolean
   isOwnPost?: boolean
   isPinned?: boolean
+  isBlocked?: boolean
 }
 
 export function CommentItem({ 
@@ -29,13 +32,16 @@ export function CommentItem({
   onReply, 
   onDelete,
   onPin,
+  onReport,
+  onBlock,
   depth = 0, 
   isReplying = false, 
   lang, 
   t,
   isOwnComment = false,
   isOwnPost = false,
-  isPinned = false
+  isPinned = false,
+  isBlocked = false
 }: CommentItemProps) {
   const [showReplyInput, setShowReplyInput] = useState(false)
   const [replyContent, setReplyContent] = useState("")
@@ -43,6 +49,7 @@ export function CommentItem({
   const [likeCount, setLikeCount] = useState(comment.likes)
   const [repostCount, setRepostCount] = useState(comment.reposts || 0)
   const [showMenu, setShowMenu] = useState(false)
+  const [isReported, setIsReported] = useState(comment.isReported || false)
   const menuRef = useRef<HTMLDivElement>(null)
 
   const config = PERSONALITY_CONFIG[comment.personality] || PERSONALITY_CONFIG.hater
@@ -50,7 +57,6 @@ export function CommentItem({
   const initials = getAvatarInitials(comment.username)
   const dateLocale = lang === "zh" ? zhCN : enUS
 
-  // Close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -61,7 +67,6 @@ export function CommentItem({
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [])
 
-  // Simulate data growth
   useEffect(() => {
     if (comment.isTyping || isOwnComment) return
     
@@ -112,6 +117,33 @@ export function CommentItem({
     onPin?.(comment.id)
   }
 
+  const handleReport = () => {
+    setShowMenu(false)
+    setIsReported(true)
+    onReport?.(comment.id, comment.username)
+  }
+
+  const handleBlock = () => {
+    setShowMenu(false)
+    onBlock?.(comment.username, comment.personality)
+  }
+
+  // If blocked, show a placeholder
+  if (isBlocked) {
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className={`${depth > 0 ? "ml-8 pl-4 border-l-2 border-border" : ""} mb-2`}
+      >
+        <div className="py-3 px-3 rounded-lg bg-secondary/20 text-muted-foreground text-sm italic flex items-center gap-2">
+          <Ban className="w-4 h-4" />
+          {t.userBlocked}
+        </div>
+      </motion.div>
+    )
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, x: isNegative ? -20 : 0, y: 10 }}
@@ -119,7 +151,6 @@ export function CommentItem({
       exit={{ opacity: 0, x: -20, height: 0 }}
       className={`${depth > 0 ? "ml-8 pl-4 border-l-2 border-border" : ""} mb-2`}
     >
-      {/* Typing indicator */}
       {comment.isTyping ? (
         <div className="flex items-center gap-2 py-3">
           <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${config.avatarGradient} shrink-0 flex items-center justify-center`}>
@@ -144,7 +175,6 @@ export function CommentItem({
           transition={{ duration: 0.3 }}
         >
           <div className="flex gap-3 relative">
-            {/* Avatar with initials */}
             <div 
               className={`w-8 h-8 rounded-full shrink-0 bg-gradient-to-br ${isOwnComment ? "from-blue-500 to-purple-500" : config.avatarGradient} flex items-center justify-center`}
             >
@@ -152,12 +182,17 @@ export function CommentItem({
             </div>
 
             <div className="flex-1 min-w-0">
-              {/* Header */}
               <div className="flex items-center gap-2 flex-wrap">
                 {isPinned && (
                   <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 flex items-center gap-1">
                     <Pin className="w-3 h-3" />
                     {t.pinned}
+                  </span>
+                )}
+                {isReported && (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400 flex items-center gap-1">
+                    <Flag className="w-3 h-3" />
+                    {t.reported}
                   </span>
                 )}
                 <span className={`font-medium text-sm ${isNegative ? "text-red-300" : "text-foreground"}`}>
@@ -173,14 +208,12 @@ export function CommentItem({
                 </span>
               </div>
 
-              {/* Content */}
               <p className={`mt-1 text-sm leading-relaxed ${
                 isNegative ? "text-red-200/90" : "text-foreground/90"
               }`}>
                 {comment.content}
               </p>
 
-              {/* Actions */}
               <div className="flex items-center gap-4 mt-2">
                 <button 
                   onClick={handleLike}
@@ -229,9 +262,9 @@ export function CommentItem({
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.9 }}
-                        className="absolute right-0 top-6 bg-card border border-border rounded-lg shadow-lg z-10 py-1 min-w-[100px]"
+                        className="absolute right-0 top-6 bg-card border border-border rounded-lg shadow-lg z-10 py-1 min-w-[120px]"
                       >
-                        {/* Pin option - only for own posts, depth 0 comments, and own comments */}
+                        {/* Pin option */}
                         {isOwnPost && depth === 0 && isOwnComment && onPin && (
                           <button
                             onClick={handlePin}
@@ -241,6 +274,30 @@ export function CommentItem({
                             {isPinned ? t.unpin : t.pin}
                           </button>
                         )}
+                        
+                        {/* Report option - only for non-own comments */}
+                        {!isOwnComment && !isReported && onReport && (
+                          <button
+                            onClick={handleReport}
+                            className="w-full px-3 py-2 text-left text-sm text-yellow-400 hover:bg-secondary flex items-center gap-2"
+                          >
+                            <Flag className="w-4 h-4" />
+                            {t.report}
+                          </button>
+                        )}
+                        
+                        {/* Block option - only for non-own comments */}
+                        {!isOwnComment && onBlock && (
+                          <button
+                            onClick={handleBlock}
+                            className="w-full px-3 py-2 text-left text-sm text-orange-400 hover:bg-secondary flex items-center gap-2"
+                          >
+                            <Ban className="w-4 h-4" />
+                            {t.block}
+                          </button>
+                        )}
+                        
+                        {/* Delete option */}
                         <button
                           onClick={handleDelete}
                           className="w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-secondary flex items-center gap-2"
@@ -254,7 +311,6 @@ export function CommentItem({
                 </div>
               </div>
 
-              {/* Reply Input */}
               {showReplyInput && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
@@ -279,7 +335,6 @@ export function CommentItem({
                 </motion.div>
               )}
 
-              {/* Replying indicator for nested replies */}
               {isReplying && (
                 <motion.div
                   initial={{ opacity: 0 }}
@@ -300,7 +355,6 @@ export function CommentItem({
                 </motion.div>
               )}
 
-              {/* Nested Replies */}
               {comment.replies.length > 0 && (
                 <div className="mt-3 space-y-2">
                   {comment.replies.map((reply) => (
@@ -309,6 +363,8 @@ export function CommentItem({
                       comment={reply}
                       onReply={onReply}
                       onDelete={onDelete}
+                      onReport={onReport}
+                      onBlock={onBlock}
                       depth={depth + 1}
                       lang={lang}
                       t={t}
