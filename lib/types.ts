@@ -195,6 +195,7 @@ export const PERSONALITY_CONFIG: Record<PersonalityType, {
 
 // 预设成就列表
 export const ACHIEVEMENTS: Achievement[] = [
+  // 发帖相关
   {
     id: "first_post",
     titleZh: "初出茅庐",
@@ -205,6 +206,25 @@ export const ACHIEVEMENTS: Achievement[] = [
     condition: (s) => s.totalPosts >= 1
   },
   {
+    id: "active_poster",
+    titleZh: "活跃博主",
+    titleEn: "Active Blogger",
+    descZh: "发布10条动态",
+    descEn: "Published 10 posts",
+    icon: "📝",
+    condition: (s) => s.totalPosts >= 10
+  },
+  {
+    id: "content_machine",
+    titleZh: "内容机器",
+    titleEn: "Content Machine",
+    descZh: "发布50条动态",
+    descEn: "Published 50 posts",
+    icon: "🤖",
+    condition: (s) => s.totalPosts >= 50
+  },
+  // 负面评论相关
+  {
     id: "first_flame",
     titleZh: "初尝被喷",
     titleEn: "First Flame",
@@ -213,6 +233,34 @@ export const ACHIEVEMENTS: Achievement[] = [
     icon: "🔥",
     condition: (s) => s.firstFlamed
   },
+  {
+    id: "flame_target",
+    titleZh: "火力集中",
+    titleEn: "Flame Target",
+    descZh: "收到10条负面评论",
+    descEn: "Received 10 negative comments",
+    icon: "🎯",
+    condition: (s) => s.totalNegativeComments >= 10
+  },
+  {
+    id: "controversy_king",
+    titleZh: "争议之王",
+    titleEn: "Controversy King",
+    descZh: "收到100+负面评论",
+    descEn: "Received 100+ negative comments",
+    icon: "💢",
+    condition: (s) => s.totalNegativeComments >= 100
+  },
+  {
+    id: "public_enemy",
+    titleZh: "全民公敌",
+    titleEn: "Public Enemy",
+    descZh: "收到500+负面评论",
+    descEn: "Received 500+ negative comments",
+    icon: "💀",
+    condition: (s) => s.totalNegativeComments >= 500
+  },
+  // 好感度相关
   {
     id: "reputation_crash",
     titleZh: "口碑崩盘",
@@ -232,7 +280,26 @@ export const ACHIEVEMENTS: Achievement[] = [
     condition: (s) => s.sentimentRecovered
   },
   {
-    id: "influencer",
+    id: "rock_bottom",
+    titleZh: "跌入谷底",
+    titleEn: "Rock Bottom",
+    descZh: "好感度跌至10%以下",
+    descEn: "Sentiment dropped below 10%",
+    icon: "🕳️",
+    condition: (s) => s.sentiment < 10
+  },
+  {
+    id: "beloved",
+    titleZh: "万人迷",
+    titleEn: "Beloved",
+    descZh: "好感度保持在90%以上",
+    descEn: "Maintained sentiment above 90%",
+    icon: "💖",
+    condition: (s) => s.sentiment >= 90
+  },
+  // 粉丝相关
+  {
+    id: "first_100",
     titleZh: "小有名气",
     titleEn: "Rising Star",
     descZh: "获得100+粉丝",
@@ -241,14 +308,42 @@ export const ACHIEVEMENTS: Achievement[] = [
     condition: (s) => s.followers >= 100
   },
   {
+    id: "influencer",
+    titleZh: "网红初成",
+    titleEn: "Influencer",
+    descZh: "获得500+粉丝",
+    descEn: "Gained 500+ followers",
+    icon: "🌟",
+    condition: (s) => s.followers >= 500
+  },
+  {
+    id: "celebrity",
+    titleZh: "网络名人",
+    titleEn: "Celebrity",
+    descZh: "获得1000+粉丝",
+    descEn: "Gained 1000+ followers",
+    icon: "🏆",
+    condition: (s) => s.followers >= 1000
+  },
+  {
     id: "hater_magnet",
     titleZh: "黑粉收割机",
     titleEn: "Hater Magnet",
     descZh: "拥有50+黑粉",
     descEn: "Gained 50+ haters",
-    icon: "🎯",
+    icon: "😈",
     condition: (s) => s.haters >= 50
   },
+  {
+    id: "anti_fan_club",
+    titleZh: "反黑联盟",
+    titleEn: "Anti-Fan Club",
+    descZh: "拥有200+黑粉",
+    descEn: "Gained 200+ haters",
+    icon: "👹",
+    condition: (s) => s.haters >= 200
+  },
+  // 互动相关
   {
     id: "blocker",
     titleZh: "一键拉黑",
@@ -257,6 +352,15 @@ export const ACHIEVEMENTS: Achievement[] = [
     descEn: "Blocked 5 users",
     icon: "🚫",
     condition: (s) => s.blockedUsers >= 5
+  },
+  {
+    id: "serial_blocker",
+    titleZh: "拉黑狂魔",
+    titleEn: "Serial Blocker",
+    descZh: "拉黑20个用户",
+    descEn: "Blocked 20 users",
+    icon: "🔒",
+    condition: (s) => s.blockedUsers >= 20
   },
   {
     id: "reporter",
@@ -268,6 +372,16 @@ export const ACHIEVEMENTS: Achievement[] = [
     condition: (s) => s.reportedComments >= 10
   },
   {
+    id: "serial_reporter",
+    titleZh: "举报专家",
+    titleEn: "Report Master",
+    descZh: "举报50条评论",
+    descEn: "Reported 50 comments",
+    icon: "🚨",
+    condition: (s) => s.reportedComments >= 50
+  },
+  // 时间相关
+  {
     id: "week_survivor",
     titleZh: "一周幸存",
     titleEn: "Week Survivor",
@@ -277,13 +391,60 @@ export const ACHIEVEMENTS: Achievement[] = [
     condition: (s) => s.daysActive >= 7
   },
   {
-    id: "controversy_king",
-    titleZh: "争议之王",
-    titleEn: "Controversy King",
-    descZh: "收到100+负面评论",
-    descEn: "Received 100+ negative comments",
-    icon: "💢",
-    condition: (s) => s.totalNegativeComments >= 100
+    id: "month_survivor",
+    titleZh: "月度老兵",
+    titleEn: "Monthly Veteran",
+    descZh: "账号运营满30天",
+    descEn: "Operated account for 30 days",
+    icon: "🗓️",
+    condition: (s) => s.daysActive >= 30
+  },
+  {
+    id: "internet_veteran",
+    titleZh: "网络老炮",
+    titleEn: "Internet Veteran",
+    descZh: "账号运营满100天",
+    descEn: "Operated account for 100 days",
+    icon: "🎖️",
+    condition: (s) => s.daysActive >= 100
+  },
+  // 评论相关
+  {
+    id: "popular",
+    titleZh: "话题人物",
+    titleEn: "Popular",
+    descZh: "收到100+条评论",
+    descEn: "Received 100+ comments",
+    icon: "💬",
+    condition: (s) => s.totalComments >= 100
+  },
+  {
+    id: "viral",
+    titleZh: "全网热议",
+    titleEn: "Viral",
+    descZh: "收到500+条评论",
+    descEn: "Received 500+ comments",
+    icon: "🌐",
+    condition: (s) => s.totalComments >= 500
+  },
+  // 特殊成就
+  {
+    id: "thick_skin",
+    titleZh: "厚脸皮",
+    titleEn: "Thick Skin",
+    descZh: "被喷50次后仍继续发帖",
+    descEn: "Kept posting after 50 flames",
+    icon: "🛡️",
+    condition: (s) => s.totalNegativeComments >= 50 && s.totalPosts >= 20
+  },
+  {
+    id: "phoenix",
+    titleZh: "浴火重生",
+    titleEn: "Phoenix",
+    descZh: "口碑崩盘3次后又恢复",
+    descEn: "Recovered from 3 PR crises",
+    icon: "🔥",
+    condition: (s) => s.sentimentRecovered && s.totalNegativeComments >= 30
   },
 ]
 

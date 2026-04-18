@@ -27,6 +27,8 @@ import { ConfirmDialog } from "@/components/confirm-dialog"
 import { DMPanel } from "@/components/dm-panel"
 import { AchievementsPanel, AchievementToast } from "@/components/achievements-panel"
 import { StoryModePanel } from "@/components/story-mode-panel"
+import { StoryModeView } from "@/components/story-mode-view"
+import { useLocalStorage } from "@/hooks/use-local-storage"
 import { ScreenEffects, useScreenShake } from "@/components/screen-effects"
 import { SentimentAnalysis } from "@/components/sentiment-analysis"
 import { useSoundEffects } from "@/hooks/use-sound-effects"
@@ -205,6 +207,10 @@ export default function EchoChamberPage() {
   const [newAchievement, setNewAchievement] = useState<Achievement | null>(null)
   const [showStoryModePanel, setShowStoryModePanel] = useState(false)
   const [activeStoryScenario, setActiveStoryScenario] = useState<StoryScenario | null>(null)
+  const [showStoryModeView, setShowStoryModeView] = useState(false)
+  const [showClearDataConfirm, setShowClearDataConfirm] = useState(false)
+  const [showLoadDataDialog, setShowLoadDataDialog] = useState(false)
+  const [lastSavedTime, setLastSavedTime] = useState<Date | null>(null)
   const [dayCount, setDayCount] = useState(1)
   const [sentimentHistory, setSentimentHistory] = useState<number[]>([75, 75, 75, 75, 75])
   const [heatHistory, setHeatHistory] = useState<number[]>([0, 0, 0, 0, 0])
@@ -219,6 +225,7 @@ export default function EchoChamberPage() {
   const otherPostTimerRef = useRef<NodeJS.Timeout | null>(null)
   const { playSound } = useSoundEffects(soundEnabled)
   const { triggerShake } = useScreenShake()
+  const { isLoaded, hasSavedData, saveSession, loadSession, clearSession, getSavedTime } = useLocalStorage()
 
   const t = translations[lang]
   const accountStats = calculateAccountStats(posts, sentiment, totalNegativeComments, contentSentimentBonus)
@@ -247,6 +254,76 @@ export default function EchoChamberPage() {
     const cachedTopics = getRandomTopics(lang, 5)
     setTrendingTopics(cachedTopics.map(t => ({ tag: t.tag, count: t.count, hot: t.hot })))
   }, [lang])
+
+  // Check for saved data on mount
+  useEffect(() => {
+    if (isLoaded && hasSavedData) {
+      setShowLoadDataDialog(true)
+      setLastSavedTime(getSavedTime())
+    }
+  }, [isLoaded, hasSavedData, getSavedTime])
+
+  // Save session handler
+  const handleSaveData = useCallback(() => {
+    saveSession({
+      lang,
+      posts,
+      sentiment,
+      totalNegativeComments,
+      directMessages,
+      blockedUsers,
+      unlockedAchievements,
+      dayCount,
+      firstFlamed,
+      sentimentCrashed,
+      sentimentRecovered
+    })
+    setLastSavedTime(new Date())
+    playSound("notification")
+  }, [lang, posts, sentiment, totalNegativeComments, directMessages, blockedUsers, unlockedAchievements, dayCount, firstFlamed, sentimentCrashed, sentimentRecovered, saveSession, playSound])
+
+  // Load saved session
+  const handleLoadData = useCallback(() => {
+    const session = loadSession()
+    if (session) {
+      setLang(session.lang)
+      setPosts(session.posts)
+      setSentiment(session.sentiment)
+      setTotalNegativeComments(session.totalNegativeComments)
+      setDirectMessages(session.directMessages)
+      setBlockedUsers(session.blockedUsers)
+      setUnlockedAchievements(session.unlockedAchievements)
+      setDayCount(session.dayCount)
+      setFirstFlamed(session.firstFlamed)
+      setSentimentCrashed(session.sentimentCrashed)
+      setSentimentRecovered(session.sentimentRecovered)
+      setLastSavedTime(new Date(session.savedAt))
+    }
+    setShowLoadDataDialog(false)
+  }, [loadSession])
+
+  // Clear session handler
+  const handleClearData = useCallback(() => {
+    setShowClearDataConfirm(true)
+  }, [])
+
+  const handleClearDataConfirm = useCallback(() => {
+    clearSession()
+    setShowClearDataConfirm(false)
+    setLastSavedTime(null)
+    // Reset all state
+    setPosts([])
+    setSentiment(75)
+    setTotalNegativeComments(0)
+    setDirectMessages([])
+    setBlockedUsers([])
+    setUnlockedAchievements([])
+    setDayCount(1)
+    setFirstFlamed(false)
+    setSentimentCrashed(false)
+    setSentimentRecovered(false)
+    setReportedComments(new Set())
+  }, [clearSession])
 
   // Update follower history
   useEffect(() => {
@@ -1230,6 +1307,10 @@ export default function EchoChamberPage() {
           onOpenAchievements={() => setShowAchievementsPanel(true)}
           onOpenStoryMode={() => setShowStoryModePanel(true)}
           dayCount={dayCount}
+          hasSavedData={hasSavedData}
+          onSaveData={handleSaveData}
+          onClearData={handleClearData}
+          lastSavedTime={lastSavedTime}
         />
       </div>
 
@@ -1523,13 +1604,76 @@ export default function EchoChamberPage() {
         onStartScenario={(scenario) => {
           setActiveStoryScenario(scenario)
           setShowStoryModePanel(false)
-          // Auto-post the scenario's initial post
-          const initialContent = lang === "zh" ? scenario.initialPost.zh : scenario.initialPost.en
-          handlePost(initialContent)
+          setShowStoryModeView(true)
         }}
         t={t}
         lang={lang}
       />
+
+      {/* Story Mode View - Isolated from main state */}
+      {showStoryModeView && activeStoryScenario && (
+        <StoryModeView
+          scenario={activeStoryScenario}
+          onExit={() => {
+            setShowStoryModeView(false)
+            setActiveStoryScenario(null)
+          }}
+          t={t}
+          lang={lang}
+        />
+      )}
+
+      {/* Clear Data Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showClearDataConfirm}
+        title={t.confirmClearData}
+        description={t.confirmClearDataDesc}
+        onConfirm={handleClearDataConfirm}
+        onCancel={() => setShowClearDataConfirm(false)}
+        t={t}
+      />
+
+      {/* Load Data Dialog */}
+      <AnimatePresence>
+        {showLoadDataDialog && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 z-[100]"
+              onClick={() => setShowLoadDataDialog(false)}
+            />
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] bg-card border border-border rounded-2xl p-6 z-[101]"
+            >
+              <h3 className="text-lg font-semibold mb-2">{t.loadSavedData}</h3>
+              {lastSavedTime && (
+                <p className="text-sm text-muted-foreground mb-4">
+                  {t.lastSaved}: {lastSavedTime.toLocaleString()}
+                </p>
+              )}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowLoadDataDialog(false)}
+                  className="flex-1 px-4 py-3 bg-secondary text-foreground rounded-xl font-medium hover:bg-secondary/80 transition-colors"
+                >
+                  {t.startFresh}
+                </button>
+                <button
+                  onClick={handleLoadData}
+                  className="flex-1 px-4 py-3 bg-primary text-primary-foreground rounded-xl font-medium hover:bg-primary/90 transition-colors"
+                >
+                  {t.loadData}
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Screen Effects */}
       <ScreenEffects

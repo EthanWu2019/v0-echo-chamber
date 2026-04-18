@@ -1,6 +1,6 @@
 "use client"
 
-import { Home, Bell, User, Radio, Globe, Sun, Moon, Mail, Trophy, Zap } from "lucide-react"
+import { Home, Bell, User, Radio, Globe, Sun, Moon, Mail, Trophy, Zap, Save, Trash2 } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import type { Language, Translations } from "@/lib/i18n"
 
@@ -18,6 +18,10 @@ interface SidebarProps {
   onOpenAchievements?: () => void
   onOpenStoryMode?: () => void
   dayCount?: number
+  hasSavedData?: boolean
+  onSaveData?: () => void
+  onClearData?: () => void
+  lastSavedTime?: Date | null
 }
 
 export function Sidebar({ 
@@ -33,7 +37,11 @@ export function Sidebar({
   onOpenDM,
   onOpenAchievements,
   onOpenStoryMode,
-  dayCount = 1
+  dayCount = 1,
+  hasSavedData = false,
+  onSaveData,
+  onClearData,
+  lastSavedTime
 }: SidebarProps) {
   const navItems = [
     { icon: Home, label: t.home, key: "home" },
@@ -138,6 +146,32 @@ export function Sidebar({
           </button>
         ))}
       </nav>
+
+      {/* Data Management */}
+      <div className="mb-4 space-y-2">
+        <div className="flex gap-2">
+          <button
+            onClick={onSaveData}
+            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-all text-sm"
+          >
+            <Save className="w-4 h-4" />
+            {t.saveData}
+          </button>
+          <button
+            onClick={onClearData}
+            disabled={!hasSavedData}
+            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Trash2 className="w-4 h-4" />
+            {t.clearData}
+          </button>
+        </div>
+        {lastSavedTime && (
+          <p className="text-xs text-muted-foreground/60 px-1 text-center">
+            {t.lastSaved}: {lastSavedTime.toLocaleTimeString()}
+          </p>
+        )}
+      </div>
 
       {/* Theme and Language Buttons */}
       <div className="mb-4 space-y-2">

@@ -166,6 +166,18 @@ export const translations = {
     darkMode: "深色模式",
     lightMode: "浅色模式",
     
+    // Data Management
+    saveData: "保存",
+    clearData: "清除",
+    lastSaved: "上次保存",
+    dataSaved: "数据已保存",
+    dataCleared: "数据已清除",
+    confirmClearData: "确定要清除所有数据吗？",
+    confirmClearDataDesc: "此操作不可撤销，所有帖子、成就和记录将被永久删除",
+    loadSavedData: "发现保存的数据，是否加载？",
+    loadData: "加载",
+    startFresh: "重新开始",
+    
     // Achievements
     achievementsTitle: "成就徽章",
     achievementUnlocked: "解锁成就",
@@ -366,6 +378,18 @@ export const translations = {
     // Theme
     darkMode: "Dark Mode",
     lightMode: "Light Mode",
+    
+    // Data Management
+    saveData: "Save",
+    clearData: "Clear",
+    lastSaved: "Last saved",
+    dataSaved: "Data saved",
+    dataCleared: "Data cleared",
+    confirmClearData: "Clear all data?",
+    confirmClearDataDesc: "This cannot be undone. All posts, achievements and records will be permanently deleted.",
+    loadSavedData: "Found saved data. Load it?",
+    loadData: "Load",
+    startFresh: "Start Fresh",
     
     // Achievements
     achievementsTitle: "Achievements",
