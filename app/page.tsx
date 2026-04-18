@@ -1482,6 +1482,16 @@ export default function EchoChamberPage() {
         messages={directMessages}
         onMarkAllRead={() => setDirectMessages(prev => prev.map(m => ({ ...m, isRead: true })))}
         onDeleteMessage={(id) => setDirectMessages(prev => prev.filter(m => m.id !== id))}
+        onSendReply={(messageId, content) => {
+          setDirectMessages(prev => prev.map(m => {
+            if (m.id !== messageId) return m
+            return {
+              ...m,
+              isRead: true,
+              replies: [...(m.replies || []), { content, timestamp: new Date() }]
+            }
+          }))
+        }}
         t={t}
         lang={lang}
       />

@@ -60,6 +60,12 @@ export interface DirectMessage {
   content: string
   timestamp: Date
   isRead: boolean
+  replies?: DMReply[]
+}
+
+export interface DMReply {
+  content: string
+  timestamp: Date
 }
 
 // 成就系统

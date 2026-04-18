@@ -65,29 +65,14 @@ export function ScreenEffects({ isLowSentiment, isCritical, showFlash }: ScreenE
         )}
       </AnimatePresence>
 
-      {/* Screen shake effect using CSS variable */}
-      <style jsx global>{`
-        @keyframes shake {
-          0%, 100% { transform: translateX(0); }
-          10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); }
-          20%, 40%, 60%, 80% { transform: translateX(2px); }
-        }
-        
-        .shake-screen {
-          animation: shake 0.5s ease-in-out;
-        }
-      `}</style>
     </>
   )
 }
 
-// Hook to trigger screen shake
+// Removed screen shake - keeping export for backwards compatibility
 export function useScreenShake() {
   const triggerShake = () => {
-    document.body.classList.add("shake-screen")
-    setTimeout(() => {
-      document.body.classList.remove("shake-screen")
-    }, 500)
+    // No-op - screen shake removed
   }
 
   return { triggerShake }

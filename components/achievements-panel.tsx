@@ -119,28 +119,32 @@ export function AchievementToast({
 }) {
   return (
     <motion.div
-      initial={{ x: 300, opacity: 0 }}
-      animate={{ x: 0, opacity: 1 }}
-      exit={{ x: 300, opacity: 0 }}
-      className="fixed top-4 right-4 z-50 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/30 rounded-xl p-4 shadow-lg max-w-sm"
+      initial={{ y: -100, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      exit={{ y: -100, opacity: 0 }}
+      className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] bg-card border-2 border-yellow-500 rounded-xl p-4 shadow-2xl max-w-sm"
+      style={{ 
+        background: "linear-gradient(135deg, rgba(234, 179, 8, 0.15) 0%, rgba(249, 115, 22, 0.15) 100%)",
+        backdropFilter: "blur(12px)"
+      }}
     >
       <div className="flex items-center gap-3">
-        <div className="w-12 h-12 rounded-full bg-yellow-500/30 flex items-center justify-center text-2xl">
+        <div className="w-14 h-14 rounded-full bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center text-2xl shadow-lg">
           {achievement.icon}
         </div>
         <div className="flex-1">
-          <p className="text-xs text-yellow-500 font-medium">
+          <p className="text-xs text-yellow-400 font-bold uppercase tracking-wider">
             {lang === "zh" ? "解锁成就" : "Achievement Unlocked"}
           </p>
-          <p className="font-semibold">
+          <p className="font-bold text-foreground text-lg">
             {lang === "zh" ? achievement.titleZh : achievement.titleEn}
           </p>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             {lang === "zh" ? achievement.descZh : achievement.descEn}
           </p>
         </div>
-        <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
-          <X className="w-4 h-4" />
+        <button onClick={onClose} className="text-muted-foreground hover:text-foreground p-1">
+          <X className="w-5 h-5" />
         </button>
       </div>
     </motion.div>
