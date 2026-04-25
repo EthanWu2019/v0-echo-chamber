@@ -369,7 +369,7 @@ export default function EchoChamberPage() {
         { content: "你是不是有病啊？发这种东西", personality: "hater" as const },
         { content: "我是你的粉丝，能加个好友吗？", personality: "stan" as const },
         { content: "我代表正义来审判你", personality: "moral-knight" as const },
-        { content: "加微信吗？有事商量", personality: "spam-bot" as const },
+        { content: "加���信吗？有事商量", personality: "spam-bot" as const },
       ] : [
         { content: "Hey, can we chat?", personality: "stan" as const },
         { content: "Saw your post, you make a good point", personality: "normal" as const },
@@ -754,30 +754,9 @@ export default function EchoChamberPage() {
       )
       const sortedResponses = [...aiResponses].sort((a, b) => a.delay - b.delay)
       
-      // Apply AI votes to poll
-      if (poll && pollVotes && pollVotes.length > 0) {
-        setPosts(prev => prev.map(p => {
-          if (p.id !== newPost.id || !p.poll) return p
-          const newOptions = [...p.poll.options]
-          pollVotes.forEach(voteIndex => {
-            if (newOptions[voteIndex]) {
-              newOptions[voteIndex] = {
-                ...newOptions[voteIndex],
-                votes: newOptions[voteIndex].votes + 1
-              }
-            }
-          })
-          const totalVotes = newOptions.reduce((sum, opt) => sum + opt.votes, 0)
-          const optionsWithPercentage = newOptions.map(opt => ({
-            ...opt,
-            percentage: totalVotes > 0 ? Math.round((opt.votes / totalVotes) * 100) : 0
-          }))
-          return {
-            ...p,
-            poll: { ...p.poll, options: optionsWithPercentage, totalVotes }
-          }
-        }))
-      }
+      // Distribute poll votes across comments - each commenter might vote
+      const votesToApply = pollVotes || []
+      let voteIndex = 0
       
       // Add initial delay before comments start appearing (simulate real social media)
       await new Promise(resolve => setTimeout(resolve, 3000 + Math.random() * 2000))
@@ -807,12 +786,38 @@ export default function EchoChamberPage() {
         
         setPosts(prev => prev.map(p => {
           if (p.id !== newPost.id) return p
+          
+          // Apply a vote from this commenter if available
+          let updatedPoll = p.poll
+          if (p.poll && votesToApply[voteIndex] !== undefined) {
+            const voteOptionIndex = votesToApply[voteIndex]
+            const newOptions = p.poll.options.map((opt, idx) => ({
+              ...opt,
+              votes: idx === voteOptionIndex ? opt.votes + 1 : opt.votes
+            }))
+            const totalVotes = newOptions.reduce((sum, opt) => sum + opt.votes, 0)
+            updatedPoll = {
+              ...p.poll,
+              options: newOptions.map(opt => ({
+                ...opt,
+                percentage: totalVotes > 0 ? Math.round((opt.votes / totalVotes) * 100) : 0
+              })),
+              totalVotes
+            }
+          }
+          
           return {
             ...p,
             comments: [...p.comments.filter(c => !c.isTyping), comment],
-            isGenerating: i < sortedResponses.length - 1
+            isGenerating: i < sortedResponses.length - 1,
+            poll: updatedPoll
           }
         }))
+        
+        // Move to next vote
+        if (votesToApply[voteIndex] !== undefined) {
+          voteIndex++
+        }
 
         handleSentimentChange(response.sentiment_impact)
 
