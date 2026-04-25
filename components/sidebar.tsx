@@ -73,11 +73,38 @@ export function Sidebar({
       </div>
 
       {/* Day Counter */}
-      <div className="mb-6 px-4 py-2 bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-lg border border-purple-500/20">
+      <div className="mb-4 px-4 py-2 bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-lg border border-purple-500/20">
         <p className="text-xs text-muted-foreground">{t.dayCount}</p>
         <p className="text-2xl font-bold text-purple-400">
           {dayCount} <span className="text-sm font-normal text-muted-foreground">{t.days}</span>
         </p>
+      </div>
+
+      {/* Data Management - Session Save */}
+      <div className="mb-6 p-3 bg-secondary/30 rounded-xl border border-border">
+        <p className="text-xs text-muted-foreground mb-2 font-medium">{t.sessionData}</p>
+        <div className="flex gap-2">
+          <button
+            onClick={onSaveData}
+            className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg bg-green-500/15 text-green-400 hover:bg-green-500/25 transition-all text-xs font-medium"
+          >
+            <Save className="w-3.5 h-3.5" />
+            {t.saveData}
+          </button>
+          <button
+            onClick={onClearData}
+            disabled={!hasSavedData}
+            className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg bg-red-500/15 text-red-400 hover:bg-red-500/25 transition-all text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            {t.clearData}
+          </button>
+        </div>
+        {lastSavedTime && (
+          <p className="text-[10px] text-muted-foreground/60 mt-1.5 text-center">
+            {t.lastSaved}: {lastSavedTime.toLocaleTimeString()}
+          </p>
+        )}
       </div>
 
       {/* Navigation */}
@@ -146,32 +173,6 @@ export function Sidebar({
           </button>
         ))}
       </nav>
-
-      {/* Data Management */}
-      <div className="mb-4 space-y-2">
-        <div className="flex gap-2">
-          <button
-            onClick={onSaveData}
-            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-all text-sm"
-          >
-            <Save className="w-4 h-4" />
-            {t.saveData}
-          </button>
-          <button
-            onClick={onClearData}
-            disabled={!hasSavedData}
-            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Trash2 className="w-4 h-4" />
-            {t.clearData}
-          </button>
-        </div>
-        {lastSavedTime && (
-          <p className="text-xs text-muted-foreground/60 px-1 text-center">
-            {t.lastSaved}: {lastSavedTime.toLocaleTimeString()}
-          </p>
-        )}
-      </div>
 
       {/* Theme and Language Buttons */}
       <div className="mb-4 space-y-2">

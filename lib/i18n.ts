@@ -148,7 +148,7 @@ export const translations = {
     
     // Topic
     back: "返回",
-    loadingTopicPosts: "正在加载热门话题帖子...",
+    loadingTopicPosts: "���在加载热门话题帖子...",
     
     // Comment
     addComment: "写下你的评论...",
@@ -167,6 +167,7 @@ export const translations = {
     lightMode: "浅色模式",
     
     // Data Management
+    sessionData: "会话数据",
     saveData: "保存",
     clearData: "清除",
     lastSaved: "上次保存",
@@ -380,6 +381,7 @@ export const translations = {
     lightMode: "Light Mode",
     
     // Data Management
+    sessionData: "Session Data",
     saveData: "Save",
     clearData: "Clear",
     lastSaved: "Last saved",
