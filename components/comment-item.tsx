@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Heart, MessageCircle, MoreHorizontal, Repeat2, Trash2, Pin, PinOff, Flag, Ban } from "lucide-react"
 import type { Comment } from "@/lib/types"
-import { PERSONALITY_CONFIG, getAvatarInitials } from "@/lib/types"
+import { PERSONALITY_CONFIG, getAvatarInitials, getAvatarUrl } from "@/lib/types"
 import type { Language, Translations } from "@/lib/i18n"
 import { getPersonalityLabel } from "@/lib/i18n"
 import { formatDistanceToNow } from "date-fns"
@@ -55,6 +55,7 @@ export function CommentItem({
   const config = PERSONALITY_CONFIG[comment.personality] || PERSONALITY_CONFIG.hater
   const isNegative = comment.sentimentImpact < 0
   const initials = getAvatarInitials(comment.username)
+  const avatarUrl = getAvatarUrl(comment.username, comment.personality)
   const dateLocale = lang === "zh" ? zhCN : enUS
 
   useEffect(() => {
@@ -175,11 +176,19 @@ export function CommentItem({
           transition={{ duration: 0.3 }}
         >
           <div className="flex gap-3 relative">
-            <div 
-              className={`w-8 h-8 rounded-full shrink-0 bg-gradient-to-br ${isOwnComment ? "from-blue-500 to-purple-500" : config.avatarGradient} flex items-center justify-center`}
-            >
-              <span className="text-white text-xs font-bold">{initials}</span>
-            </div>
+            {isOwnComment ? (
+              <div className="w-8 h-8 rounded-full shrink-0 bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
+                <span className="text-white text-xs font-bold">{initials}</span>
+              </div>
+            ) : (
+              <div className="w-8 h-8 rounded-full shrink-0 overflow-hidden bg-secondary">
+                <img 
+                  src={avatarUrl} 
+                  alt={comment.username}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
 
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
