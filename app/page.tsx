@@ -84,8 +84,11 @@ async function fetchAIComments(
   userReplyContent = "",
   isDeleteResponse = false,
   deletedPersonality = "",
-  deletedUsername = ""
-): Promise<AICommentResponse[]> {
+  deletedUsername = "",
+  pollQuestion = "",
+  pollOptions: string[] = [],
+  imageUrl = ""
+): Promise<{ comments: AICommentResponse[], pollVotes?: number[] }> {
   try {
     const response = await fetch("/api/generate-comments", {
       method: "POST",
@@ -99,22 +102,25 @@ async function fetchAIComments(
         lang,
         isDeleteResponse,
         deletedPersonality,
-        deletedUsername
+        deletedUsername,
+        pollQuestion,
+        pollOptions,
+        imageUrl
       }),
     })
 
     if (!response.ok) throw new Error("API request failed")
     const data = await response.json()
-    return data.comments || []
+    return { comments: data.comments || [], pollVotes: data.pollVotes }
   } catch (error) {
     console.error("[v0] Failed to fetch AI comments:", error)
-    return [{
+    return { comments: [{
       username: lang === "en" ? "System" : "系统提示",
       personality: "hater" as const,
       content: lang === "en" ? "Failed to load comments" : "评论加载失败",
       sentiment_impact: 0,
       delay: 0,
-    }]
+    }] }
   }
 }
 
@@ -363,7 +369,7 @@ export default function EchoChamberPage() {
         { content: "你是不是有病啊？发这种东西", personality: "hater" as const },
         { content: "我是你的粉丝，能加个好友吗？", personality: "stan" as const },
         { content: "我代表正义来审判你", personality: "moral-knight" as const },
-        { content: "加微信吗？有事商量", personality: "spam-bot" as const },
+        { content: "加���信吗？有事商量", personality: "spam-bot" as const },
       ] : [
         { content: "Hey, can we chat?", personality: "stan" as const },
         { content: "Saw your post, you make a good point", personality: "normal" as const },
@@ -523,7 +529,7 @@ export default function EchoChamberPage() {
       const cachedPost = getRandomOtherUserPost(lang)
       
       // Generate comments for this post
-      const aiResponses = await fetchAIComments(cachedPost.content, lang)
+      const { comments: aiResponses } = await fetchAIComments(cachedPost.content, lang)
       const comments = aiResponses.map(responseToComment)
       
       const newPost: Post = {
@@ -739,8 +745,18 @@ export default function EchoChamberPage() {
     setReviewProgress(0)
 
     try {
-      const aiResponses = await fetchAIComments(content, lang)
+      // Pass poll and image data to AI
+      const pollQuestion = poll?.question || ""
+      const pollOptions = poll?.options.map(o => o.text) || []
+      const { comments: aiResponses, pollVotes } = await fetchAIComments(
+        content, lang, false, "", "", "", false, "", "", 
+        pollQuestion, pollOptions, imageUrl || ""
+      )
       const sortedResponses = [...aiResponses].sort((a, b) => a.delay - b.delay)
+      
+      // Distribute poll votes across comments - each commenter might vote
+      const votesToApply = pollVotes || []
+      let voteIndex = 0
       
       // Add initial delay before comments start appearing (simulate real social media)
       await new Promise(resolve => setTimeout(resolve, 3000 + Math.random() * 2000))
@@ -770,12 +786,38 @@ export default function EchoChamberPage() {
         
         setPosts(prev => prev.map(p => {
           if (p.id !== newPost.id) return p
+          
+          // Apply a vote from this commenter if available
+          let updatedPoll = p.poll
+          if (p.poll && votesToApply[voteIndex] !== undefined) {
+            const voteOptionIndex = votesToApply[voteIndex]
+            const newOptions = p.poll.options.map((opt, idx) => ({
+              ...opt,
+              votes: idx === voteOptionIndex ? opt.votes + 1 : opt.votes
+            }))
+            const totalVotes = newOptions.reduce((sum, opt) => sum + opt.votes, 0)
+            updatedPoll = {
+              ...p.poll,
+              options: newOptions.map(opt => ({
+                ...opt,
+                percentage: totalVotes > 0 ? Math.round((opt.votes / totalVotes) * 100) : 0
+              })),
+              totalVotes
+            }
+          }
+          
           return {
             ...p,
             comments: [...p.comments.filter(c => !c.isTyping), comment],
-            isGenerating: i < sortedResponses.length - 1
+            isGenerating: i < sortedResponses.length - 1,
+            poll: updatedPoll
           }
         }))
+        
+        // Move to next vote
+        if (votesToApply[voteIndex] !== undefined) {
+          voteIndex++
+        }
 
         handleSentimentChange(response.sentiment_impact)
 
@@ -850,7 +892,7 @@ export default function EchoChamberPage() {
 
     // Generate AI reply - should be nested under user's comment
     const postContent = getPostContent(postId)
-    const responses = await fetchAIComments(content, lang, true, "", postContent, content)
+    const { comments: responses } = await fetchAIComments(content, lang, true, "", postContent, content)
     
     if (responses.length > 0) {
       await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 1500))
@@ -962,7 +1004,7 @@ export default function EchoChamberPage() {
 
     if (originalComment) {
       const originalPostContent = getPostContent(postId)
-      const responses = await fetchAIComments(
+      const { comments: responses } = await fetchAIComments(
         content, 
         lang,
         true, 
@@ -1051,7 +1093,7 @@ export default function EchoChamberPage() {
     if (!isOwnComment) {
       const originalPostContent = getPostContent(postId)
       
-      const responses = await fetchAIComments(
+      const { comments: responses } = await fetchAIComments(
         originalPostContent,
         lang,
         false, "", "", "",
@@ -1231,7 +1273,7 @@ export default function EchoChamberPage() {
     
     // Generate comments for each post
     const postsWithComments = await Promise.all(cachedPosts.map(async (p) => {
-      const aiResponses = await fetchAIComments(p.content, lang)
+      const { comments: aiResponses } = await fetchAIComments(p.content, lang)
       return {
         id: generateId(),
         content: p.content,
@@ -1571,6 +1613,15 @@ export default function EchoChamberPage() {
           const message = directMessages.find(m => m.id === messageId)
           if (!message) return
 
+          // Build conversation history for context
+          const conversationHistory = [
+            `${message.from}: ${message.content}`,
+            ...(message.replies || []).map(r => 
+              r.isFromUser ? `You: ${r.content}` : `${message.from}: ${r.content}`
+            ),
+            `You: ${content}`
+          ].join("\n")
+
           setDirectMessages(prev => prev.map(m => {
             if (m.id !== messageId) return m
             return {
@@ -1589,6 +1640,7 @@ export default function EchoChamberPage() {
                 isDMReply: true,
                 dmPersonality: message.personality,
                 dmContent: message.content,
+                dmConversation: conversationHistory,
                 userDMReply: content,
                 lang
               }),

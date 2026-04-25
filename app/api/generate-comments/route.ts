@@ -253,7 +253,11 @@ export async function POST(request: NextRequest) {
       isDMReply,
       dmPersonality,
       dmContent,
-      userDMReply
+      dmConversation,
+      userDMReply,
+      pollQuestion,
+      pollOptions,
+      imageUrl
     } = await request.json();
 
     let SYSTEM_PROMPT = lang === "en" ? SYSTEM_PROMPT_EN : SYSTEM_PROMPT_ZH;
@@ -262,12 +266,14 @@ export async function POST(request: NextRequest) {
     if (isDMReply) {
       // Generate DM conversation response
       SYSTEM_PROMPT = lang === "en" 
-        ? `You simulate a direct message conversation. The user just replied to a DM. Generate 1 follow-up DM response that matches the original sender's personality. Keep it conversational and realistic. Return JSON array with one message object containing: username (same as original), personality, content, sentiment_impact (-10 to 10), delay (0).`
-        : `你模拟私信对话。用户刚回复了一条私信。生成1条符合原发送者人格的后续私信回复。保持对话真实自然。返回JSON数组，包含一个消息对象：username（与原用户相同）、personality、content、sentiment_impact（-10到10）、delay（0）。`;
+        ? `You simulate a direct message conversation. The user just replied to a DM. Generate 1 follow-up DM response that matches the original sender's personality. Keep it conversational and realistic. The conversation can naturally evolve - haters might escalate or get bored and leave, fans might get excited, etc. Return JSON array with one message object containing: username (same as original), personality, content, sentiment_impact (-10 to 10), delay (0).`
+        : `你模拟私信对话。用户刚回复了一条私信。生成1条符合原发送者人格的后续私信回复。保持对话真实自然。对话可以自然发展——喷子可能升级或无聊离开，粉丝可能更兴奋等。返回JSON数组，包含一个消息对象：username（与原用户相同）、personality、content、sentiment_impact（-10到10）、delay（0）。`;
+      
+      const conversationContext = dmConversation || `${dmPersonality}: ${dmContent}\nYou: ${userDMReply}`;
       
       userPrompt = lang === "en"
-        ? `Original DM from "${dmPersonality}" type user: "${dmContent}"\nUser replied: "${userDMReply}"\n\nGenerate their response. If they were hostile, they might get angrier or back off. If friendly, continue being friendly.`
-        : `来自"${dmPersonality}"类型用户的原始私信："${dmContent}"\n用户回复了："${userDMReply}"\n\n生成他们的回应。如果之前是敌意的，可能会更生气或者退缩。如果友好，继续友好。`;
+        ? `Conversation with a "${dmPersonality}" type user:\n${conversationContext}\n\nGenerate their next response. Consider the full conversation context. They might:\n- Continue the conversation naturally\n- Get frustrated and leave (respond with something like "whatever, bye")\n- Escalate if they were angry\n- Change topic\n- Ask follow-up questions`
+        : `与"${dmPersonality}"类型用户的对话：\n${conversationContext}\n\n生成他们的下一条回复。考虑完整对话上下文。他们可能：\n- 自然地继续对话\n- 感到无聊离开（回复类似"算了，拜拜"）\n- 如果生气可能升级\n- 换话题\n- 问后续问题`;
     } else if (isDeleteResponse) {
       SYSTEM_PROMPT = lang === "en" ? DELETE_RESPONSE_EN : DELETE_RESPONSE_ZH;
       userPrompt = lang === "en" 
@@ -304,24 +310,42 @@ Generate 1-3 follow-up comments. People should:
 - 真实一点——不是每个人都会回复`;
       }
     } else {
+      // Build content description
+      let contentDesc = postContent || ""
+      if (pollQuestion && pollOptions) {
+        const optionsList = pollOptions.map((opt: string, i: number) => `${i + 1}. ${opt}`).join(", ")
+        contentDesc += lang === "en" 
+          ? `\n\n[POLL] Question: "${pollQuestion}" Options: ${optionsList}`
+          : `\n\n[投票] 问题: "${pollQuestion}" 选项: ${optionsList}`
+      }
+      if (imageUrl) {
+        contentDesc += lang === "en" 
+          ? "\n\n[Contains an image]"
+          : "\n\n[包含一张图片]"
+      }
+
       if (lang === "en") {
-        userPrompt = `User posted: "${postContent}"
+        userPrompt = `User posted: "${contentDesc}"
 
 Generate 3-6 diverse comments. Remember:
 - Mix of personalities and speaking styles
 - Not everyone is extreme, include chill normal comments
 - Vary comment length (some short "lol", some longer)
 - Make it feel like a real comment section
-- Different people arrive at different times (use delay)`;
+- Different people arrive at different times (use delay)
+${pollQuestion ? "- Some users should react to the poll options, maybe say which they'd vote for" : ""}
+${imageUrl ? "- Some users should comment on the image" : ""}`;
       } else {
-        userPrompt = `用户发帖："${postContent}"
+        userPrompt = `用户发帖："${contentDesc}"
 
 生成3-6条多样化评论。记住：
 - 混合不同人格和说话风格
 - 不是每个人都极端，加入一些普通评论
 - 评论长度要有变化（有的很短"哈哈"，有的长一点）
 - 让它看起来像真实的评论区
-- 不同的人在不同时间到达（用delay体现）`;
+- 不同的人在不同时间到达（用delay体现）
+${pollQuestion ? "- 有些用户应该对投票选项发表看法，说说他们会选哪个" : ""}
+${imageUrl ? "- 有些用户应该对图片发表评论" : ""}`;
       }
     }
 
@@ -407,7 +431,19 @@ Generate 3-6 diverse comments. Remember:
         : personalityMap[c.personality?.toLowerCase()] || "normal"
     }));
 
-    return NextResponse.json({ comments: normalizedComments });
+    // Generate random votes for poll if poll exists
+    let pollVotes: number[] = [];
+    if (pollOptions && pollOptions.length > 0) {
+      // Each commenter has a chance to vote
+      normalizedComments.forEach(() => {
+        if (Math.random() > 0.3) { // 70% chance to vote
+          const voteIndex = Math.floor(Math.random() * pollOptions.length);
+          pollVotes.push(voteIndex);
+        }
+      });
+    }
+
+    return NextResponse.json({ comments: normalizedComments, pollVotes });
   } catch (error) {
     console.error("[v0] API route error:", error);
     return NextResponse.json(
