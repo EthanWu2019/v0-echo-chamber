@@ -30,6 +30,7 @@ import { StoryModePanel } from "@/components/story-mode-panel"
 import { StoryModeView } from "@/components/story-mode-view"
 import { useLocalStorage } from "@/hooks/use-local-storage"
 import { ScreenEffects, useScreenShake } from "@/components/screen-effects"
+import { IdleOverlay } from "@/components/idle-overlay"
 import { SentimentAnalysis } from "@/components/sentiment-analysis"
 import { useSoundEffects } from "@/hooks/use-sound-effects"
 import type { Post, Comment, AICommentResponse, AccountStats, DirectMessage, BlockedUser, Achievement, Poll, StoryScenario, Mention } from "@/lib/types"
@@ -210,6 +211,7 @@ export default function EchoChamberPage() {
   const [showStoryModeView, setShowStoryModeView] = useState(false)
   const [showClearDataConfirm, setShowClearDataConfirm] = useState(false)
   const [showLoadDataDialog, setShowLoadDataDialog] = useState(false)
+  const [isPaused, setIsPaused] = useState(false)
   const [lastSavedTime, setLastSavedTime] = useState<Date | null>(null)
   const [dayCount, setDayCount] = useState(1)
   const [sentimentHistory, setSentimentHistory] = useState<number[]>([75, 75, 75, 75, 75])
@@ -351,9 +353,10 @@ export default function EchoChamberPage() {
 
   // Generate DMs periodically
   useEffect(() => {
-    if (posts.length === 0) return
+    if (posts.length === 0 || isPaused) return
 
     const generateDM = () => {
+      if (isPaused) return
       const dmContents = lang === "zh" ? [
         { content: "你好，能认识一下吗？", personality: "stan" as const },
         { content: "看了你的帖子，我觉得你说得很有道理", personality: "normal" as const },
@@ -399,7 +402,7 @@ export default function EchoChamberPage() {
       clearTimeout(firstDMTimer)
       clearInterval(dmInterval)
     }
-  }, [posts.length, lang, playSound])
+  }, [posts.length, lang, playSound, isPaused])
 
   // Check achievements
   useEffect(() => {
@@ -544,7 +547,7 @@ export default function EchoChamberPage() {
 
     // Then every 2-4 minutes
     otherPostTimerRef.current = setInterval(() => {
-      if (posts.length > 0) {
+      if (posts.length > 0 && !isPaused) {
         generateOtherPost()
       }
     }, 120000 + Math.random() * 120000)
@@ -552,7 +555,7 @@ export default function EchoChamberPage() {
     return () => {
       if (otherPostTimerRef.current) clearInterval(otherPostTimerRef.current)
     }
-  }, [posts.length, lang, responseToComment, otherUserPosts.length])
+  }, [posts.length, lang, responseToComment, otherUserPosts.length, isPaused])
 
   // Language switch - show confirmation first
   const handleLanguageSwitchClick = useCallback(() => {
@@ -1563,15 +1566,58 @@ export default function EchoChamberPage() {
         messages={directMessages}
         onMarkAllRead={() => setDirectMessages(prev => prev.map(m => ({ ...m, isRead: true })))}
         onDeleteMessage={(id) => setDirectMessages(prev => prev.filter(m => m.id !== id))}
-        onSendReply={(messageId, content) => {
+        onSendReply={async (messageId, content) => {
+          // Add user's reply immediately
+          const message = directMessages.find(m => m.id === messageId)
+          if (!message) return
+
           setDirectMessages(prev => prev.map(m => {
             if (m.id !== messageId) return m
             return {
               ...m,
               isRead: true,
-              replies: [...(m.replies || []), { content, timestamp: new Date() }]
+              replies: [...(m.replies || []), { content, timestamp: new Date(), isFromUser: true }]
             }
           }))
+
+          // Generate AI response
+          try {
+            const response = await fetch("/api/generate-comments", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                isDMReply: true,
+                dmPersonality: message.personality,
+                dmContent: message.content,
+                userDMReply: content,
+                lang
+              }),
+            })
+
+            if (response.ok) {
+              const data = await response.json()
+              if (data.comments && data.comments.length > 0) {
+                // Wait a bit for realism
+                await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 2000))
+                
+                const aiReply = data.comments[0]
+                setDirectMessages(prev => prev.map(m => {
+                  if (m.id !== messageId) return m
+                  return {
+                    ...m,
+                    replies: [...(m.replies || []), { 
+                      content: aiReply.content, 
+                      timestamp: new Date(),
+                      isFromUser: false
+                    }]
+                  }
+                }))
+                playSound("notification")
+              }
+            }
+          } catch (error) {
+            console.error("[v0] Failed to generate DM reply:", error)
+          }
         }}
         t={t}
         lang={lang}
@@ -1680,6 +1726,15 @@ export default function EchoChamberPage() {
         isLowSentiment={isLowSentiment}
         isCritical={sentiment < 20}
         showFlash={showNegativeFlash}
+      />
+
+      {/* Idle Overlay - Pauses generation when user is inactive */}
+      <IdleOverlay
+        timeout={120000}
+        onResume={() => setIsPaused(false)}
+        onIdle={() => setIsPaused(true)}
+        lang={lang}
+        t={t}
       />
     </div>
   )

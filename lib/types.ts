@@ -66,6 +66,7 @@ export interface DirectMessage {
 export interface DMReply {
   content: string
   timestamp: Date
+  isFromUser: boolean
 }
 
 // 成就系统
@@ -496,13 +497,32 @@ export const STORY_SCENARIOS: StoryScenario[] = [
     descZh: "你无意中卷入了一场网络骂战",
     descEn: "You accidentally got involved in an online flame war",
     initialPost: {
-      zh: "我觉得这件事情大家都有道理吧...",
+      zh: "我��得这件事情大家都有道理吧...",
       en: "I think everyone has a point in this matter..."
     },
     difficulty: "hard",
     icon: "⚔️"
   },
 ]
+
+// NPC avatar URLs - using DiceBear Avatars (free, no copyright issues)
+export function getAvatarUrl(username: string, personality: PersonalityType): string {
+  // Create a consistent seed from username for reproducible avatars
+  const seed = username.replace(/[^a-zA-Z0-9]/g, "")
+  
+  // Different avatar styles for different personalities
+  const styles: Record<PersonalityType, string> = {
+    "hater": "thumbs",
+    "stan": "lorelei",
+    "logic-lord": "bottts",
+    "moral-knight": "personas",
+    "spam-bot": "shapes",
+    "normal": "avataaars"
+  }
+  
+  const style = styles[personality]
+  return `https://api.dicebear.com/7.x/${style}/svg?seed=${seed}`
+}
 
 // 获取用户名首字母
 export function getAvatarInitials(username: string): string {
