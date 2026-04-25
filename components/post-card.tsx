@@ -385,7 +385,7 @@ export function PostCard({
                     key={comment.id}
                     comment={comment}
                     onReply={handleReply}
-                    onDelete={handleDelete}
+                    onDelete={!isOtherUser ? handleDelete : undefined}
                     onPin={!isOtherUser ? handlePinComment : undefined}
                     onReport={handleReport}
                     onBlock={handleBlock}

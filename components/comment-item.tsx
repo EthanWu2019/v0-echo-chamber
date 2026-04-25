@@ -306,14 +306,16 @@ export function CommentItem({
                           </button>
                         )}
                         
-                        {/* Delete option */}
-                        <button
-                          onClick={handleDelete}
-                          className="w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-secondary flex items-center gap-2"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          {isOwnComment ? t.withdraw : t.delete}
-                        </button>
+                        {/* Delete option - only for own comments or if on own post */}
+                        {(isOwnComment || (isOwnPost && onDelete)) && (
+                          <button
+                            onClick={handleDelete}
+                            className="w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-secondary flex items-center gap-2"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            {isOwnComment ? t.withdraw : t.delete}
+                          </button>
+                        )}
                       </motion.div>
                     )}
                   </AnimatePresence>
