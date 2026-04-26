@@ -85,23 +85,11 @@ export function PostBox({ onPost, isLoading, reviewProgress = 0, reviewPhase = "
   }
 
   return (
-    <div className="bg-card border border-border rounded-2xl p-4">
-      {/* Warning Banner */}
-      <motion.div 
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex items-center gap-2 mb-4 px-3 py-2 bg-pink-500/10 border border-pink-500/30 rounded-lg"
-      >
-        <span className="text-base shrink-0">{t.catEmoji}</span>
-        <p className="text-xs text-pink-400">
-          {t.friendlyReminder}
-        </p>
-      </motion.div>
-
+    <div className="border-b border-border px-4 py-3">
       {/* Input Area */}
-      <div className="flex gap-4">
-        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 shrink-0 flex items-center justify-center">
-          <span className="text-white font-bold">U</span>
+      <div className="flex gap-3">
+        <div className="w-10 h-10 rounded-full shrink-0 overflow-hidden">
+          <img src="/favicon.png" alt="User" className="w-full h-full object-cover" />
         </div>
         <div className="flex-1">
           <textarea
@@ -244,7 +232,7 @@ export function PostBox({ onPost, isLoading, reviewProgress = 0, reviewPhase = "
           </AnimatePresence>
           
           {/* Footer */}
-          <div className="flex items-center justify-between pt-3 border-t border-border">
+          <div className="flex items-center justify-between pt-3">
             <div className="flex items-center gap-2">
               {/* Image Upload */}
               <input
@@ -282,7 +270,7 @@ export function PostBox({ onPost, isLoading, reviewProgress = 0, reviewPhase = "
             <Button
               onClick={handleSubmit}
               disabled={(!content.trim() && !imagePreview && !showPollCreator) || isLoading}
-              className="bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white font-medium px-6 rounded-full min-w-[100px]"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-5 rounded-full"
             >
               <AnimatePresence mode="wait">
                 {isLoading ? (

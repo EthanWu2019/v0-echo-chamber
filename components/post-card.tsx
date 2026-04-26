@@ -139,8 +139,8 @@ export function PostCard({
     <motion.article
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`bg-card border rounded-2xl overflow-hidden transition-colors ${
-        hasNegativeVibes ? "border-red-500/30" : "border-border"
+      className={`border-b transition-colors ${
+        hasNegativeVibes ? "border-red-500/30 bg-red-500/5" : "border-border hover:bg-foreground/[0.02]"
       }`}
     >
       {/* Repost Header */}
@@ -152,10 +152,10 @@ export function PostCard({
       )}
 
       {/* Post Header */}
-      <div className="p-4">
+      <div className="px-4 py-3">
         <div className="flex gap-3">
-          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 shrink-0 flex items-center justify-center">
-            <span className="text-white text-lg font-bold">
+          <div className="w-10 h-10 rounded-full bg-primary shrink-0 flex items-center justify-center">
+            <span className="text-primary-foreground font-semibold text-sm">
               {displayUsername.charAt(0).toUpperCase()}
             </span>
           </div>
@@ -343,8 +343,8 @@ export function PostCard({
             {/* Comment Input */}
             {onCommentOnPost && (
               <div className="p-4 flex gap-3 border-b border-border">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 shrink-0 flex items-center justify-center">
-                  <span className="text-white text-sm font-bold">U</span>
+                <div className="w-8 h-8 rounded-full shrink-0 overflow-hidden">
+                  <img src="/favicon.png" alt="User" className="w-full h-full object-cover" />
                 </div>
                 <div className="flex-1 flex gap-2">
                   <input

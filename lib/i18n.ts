@@ -9,6 +9,7 @@ export const translations = {
     messages: "私信",
     achievements: "成就",
     storyMode: "剧情模式",
+    more: "更多",
     
     // Post box
     postPlaceholder: "在想什么？发条动态试试...",
@@ -170,6 +171,8 @@ export const translations = {
     sessionData: "会话数据",
     saveData: "保存",
     clearData: "清除",
+    saveProgress: "保存进度到本地",
+    clearProgress: "清除本地数据",
     lastSaved: "上次保存",
     dataSaved: "数据已保存",
     dataCleared: "数据已清除",
@@ -223,6 +226,7 @@ export const translations = {
     messages: "Messages",
     achievements: "Achievements",
     storyMode: "Story Mode",
+    more: "More",
     
     // Post box
     postPlaceholder: "What's on your mind? Share something...",
@@ -384,6 +388,8 @@ export const translations = {
     sessionData: "Session Data",
     saveData: "Save",
     clearData: "Clear",
+    saveProgress: "Save progress locally",
+    clearProgress: "Clear local data",
     lastSaved: "Last saved",
     dataSaved: "Data saved",
     dataCleared: "Data cleared",

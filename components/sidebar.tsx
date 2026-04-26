@@ -1,6 +1,6 @@
 "use client"
 
-import { Home, Bell, User, Radio, Globe, Sun, Moon, Mail, Trophy, Zap, Save, Trash2 } from "lucide-react"
+import { Home, Bell, User, Radio, Globe, Sun, Moon, Mail, Trophy, Zap, HardDrive } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import type { Language, Translations } from "@/lib/i18n"
 
@@ -43,143 +43,152 @@ export function Sidebar({
   onClearData,
   lastSavedTime
 }: SidebarProps) {
-  const navItems = [
-    { icon: Home, label: t.home, key: "home" },
-    { icon: Bell, label: t.notifications, hasNotification: true, notifCount: notificationCount, key: "notifications" },
-    { icon: User, label: t.profile, key: "profile" },
-  ]
-
-  const actionItems = [
-    { icon: Mail, label: t.messages, onClick: onOpenDM, count: dmCount },
-    { icon: Trophy, label: t.achievements, onClick: onOpenAchievements },
-    { icon: Zap, label: t.storyMode, onClick: onOpenStoryMode },
-  ]
   
   return (
-    <aside className="fixed left-0 top-0 h-screen w-64 border-r border-border bg-card p-6 flex flex-col">
+    <aside className="fixed left-0 top-0 h-screen w-[275px] border-r border-border bg-background px-3 py-4 flex flex-col">
       {/* Logo */}
-      <div className="flex items-center gap-3 mb-6">
-        <div className="relative">
-          <Radio className="w-8 h-8 text-red-500" />
-          <motion.div
-            className="absolute inset-0 rounded-full bg-red-500/30"
-            animate={{ scale: [1, 1.5, 1], opacity: [0.5, 0, 0.5] }}
-            transition={{ duration: 2, repeat: Infinity }}
-          />
+      <div className="px-3 mb-8">
+        <div className="flex items-center gap-2.5 py-2">
+          <div className="relative">
+            <Radio className="w-7 h-7 text-primary" />
+            <motion.div
+              className="absolute inset-0 rounded-full bg-primary/20"
+              animate={{ scale: [1, 1.4, 1], opacity: [0.4, 0, 0.4] }}
+              transition={{ duration: 2.5, repeat: Infinity }}
+            />
+          </div>
+          <span className="text-xl font-bold text-foreground">EchoChamber</span>
         </div>
-        <span className="text-xl font-bold bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text text-transparent">
-          EchoChamber
-        </span>
       </div>
 
-      {/* Day Counter */}
-      <div className="mb-4 px-4 py-2 bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-lg border border-purple-500/20">
-        <p className="text-xs text-muted-foreground">{t.dayCount}</p>
-        <p className="text-2xl font-bold text-purple-400">
-          {dayCount} <span className="text-sm font-normal text-muted-foreground">{t.days}</span>
-        </p>
-      </div>
+      {/* Main Navigation */}
+      <nav className="flex-1">
+        {/* Home */}
+        <button
+          onClick={() => onNavClick?.(t.home)}
+          className={`w-full flex items-center gap-4 px-3 py-3 rounded-full transition-colors
+            ${activeNav === t.home 
+              ? "bg-foreground/10 font-semibold" 
+              : "hover:bg-foreground/5"
+            }`}
+        >
+          <Home className={`w-[26px] h-[26px] ${activeNav === t.home ? "stroke-[2.5]" : ""}`} />
+          <span className="text-xl">{t.home}</span>
+        </button>
 
-      {/* Data Management - Session Save */}
-      <div className="mb-6 p-3 bg-secondary/30 rounded-xl border border-border">
-        <p className="text-xs text-muted-foreground mb-2 font-medium">{t.sessionData}</p>
-        <div className="flex gap-2">
-          <button
-            onClick={onSaveData}
-            className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg bg-green-500/15 text-green-400 hover:bg-green-500/25 transition-all text-xs font-medium"
-          >
-            <Save className="w-3.5 h-3.5" />
-            {t.saveData}
-          </button>
-          <button
-            onClick={onClearData}
-            disabled={!hasSavedData}
-            className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg bg-red-500/15 text-red-400 hover:bg-red-500/25 transition-all text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-            {t.clearData}
-          </button>
-        </div>
-        {lastSavedTime && (
-          <p className="text-[10px] text-muted-foreground/60 mt-1.5 text-center">
-            {t.lastSaved}: {lastSavedTime.toLocaleTimeString()}
-          </p>
-        )}
-      </div>
+        {/* Notifications */}
+        <button
+          onClick={() => onNavClick?.(t.notifications)}
+          className={`w-full flex items-center gap-4 px-3 py-3 rounded-full transition-colors
+            ${activeNav === t.notifications 
+              ? "bg-foreground/10 font-semibold" 
+              : "hover:bg-foreground/5"
+            }`}
+        >
+          <div className="relative w-[26px] h-[26px]">
+            <Bell className={`w-[26px] h-[26px] ${activeNav === t.notifications ? "stroke-[2.5]" : ""}`} />
+            {notificationCount > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] bg-primary text-primary-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
+                {notificationCount > 99 ? "99+" : notificationCount}
+              </span>
+            )}
+          </div>
+          <span className="text-xl">{t.notifications}</span>
+        </button>
 
-      {/* Navigation */}
-      <nav className="flex-1 space-y-2">
-        {navItems.map((item) => (
-          <button
-            key={item.key}
-            onClick={() => onNavClick?.(item.label)}
-            className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all
-              ${activeNav === item.label 
-                ? "bg-secondary text-foreground" 
-                : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
-              }`}
-          >
-            <div className="relative">
-              <item.icon className="w-6 h-6" />
-              <AnimatePresence>
-                {item.hasNotification && item.notifCount && item.notifCount > 0 && (
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    exit={{ scale: 0 }}
-                    className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center"
-                  >
-                    <motion.div
-                      className="absolute inset-0 rounded-full bg-red-500"
-                      animate={{ scale: [1, 1.3, 1], opacity: [1, 0.5, 1] }}
-                      transition={{ duration: 1, repeat: Infinity }}
-                    />
-                    <span className="text-xs font-bold text-white relative z-10">
-                      {item.notifCount > 9 ? "9+" : item.notifCount}
-                    </span>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-            <span className="text-base font-medium">{item.label}</span>
-          </button>
-        ))}
+        {/* Messages */}
+        <button
+          onClick={onOpenDM}
+          className="w-full flex items-center gap-4 px-3 py-3 rounded-full transition-colors hover:bg-foreground/5"
+        >
+          <div className="relative w-[26px] h-[26px]">
+            <Mail className="w-[26px] h-[26px]" />
+            {dmCount > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] bg-primary text-primary-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
+                {dmCount > 99 ? "99+" : dmCount}
+              </span>
+            )}
+          </div>
+          <span className="text-xl">{t.messages}</span>
+        </button>
+
+        {/* Profile */}
+        <button
+          onClick={() => onNavClick?.(t.profile)}
+          className={`w-full flex items-center gap-4 px-3 py-3 rounded-full transition-colors
+            ${activeNav === t.profile 
+              ? "bg-foreground/10 font-semibold" 
+              : "hover:bg-foreground/5"
+            }`}
+        >
+          <User className={`w-[26px] h-[26px] ${activeNav === t.profile ? "stroke-[2.5]" : ""}`} />
+          <span className="text-xl">{t.profile}</span>
+        </button>
 
         {/* Divider */}
-        <div className="my-4 border-t border-border" />
+        <div className="my-2 mx-3 border-t border-border/50" />
 
-        {/* Action Items */}
-        {actionItems.map((item, index) => (
-          <button
-            key={index}
-            onClick={item.onClick}
-            className="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-muted-foreground hover:bg-secondary/50 hover:text-foreground transition-all"
-          >
-            <div className="relative">
-              <item.icon className="w-6 h-6" />
-              {item.count && item.count > 0 && (
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center"
-                >
-                  <span className="text-[10px] font-bold text-white">
-                    {item.count > 9 ? "9+" : item.count}
-                  </span>
-                </motion.div>
-              )}
-            </div>
-            <span className="text-base font-medium">{item.label}</span>
-          </button>
-        ))}
+        {/* Story Mode */}
+        <button
+          onClick={onOpenStoryMode}
+          className="w-full flex items-center gap-4 px-3 py-3 rounded-full transition-colors hover:bg-foreground/5"
+        >
+          <Zap className="w-[26px] h-[26px]" />
+          <span className="text-xl">{t.storyMode}</span>
+        </button>
+
+        {/* Achievements */}
+        <button
+          onClick={onOpenAchievements}
+          className="w-full flex items-center gap-4 px-3 py-3 rounded-full transition-colors hover:bg-foreground/5"
+        >
+          <Trophy className="w-[26px] h-[26px]" />
+          <span className="text-xl">{t.achievements}</span>
+        </button>
       </nav>
 
-      {/* Theme and Language Buttons */}
-      <div className="mb-4 space-y-2">
+      {/* Bottom Section */}
+      <div className="space-y-1">
+        {/* Day Counter */}
+        <div className="px-3 py-2 mb-2">
+          <div className="text-sm text-muted-foreground">{t.dayCount}</div>
+          <div className="text-2xl font-bold">{dayCount} <span className="text-sm font-normal text-muted-foreground">{t.days}</span></div>
+        </div>
+
+        {/* Session Save */}
+        <button
+          onClick={onSaveData}
+          className="w-full flex items-center gap-4 px-3 py-2.5 rounded-full transition-colors hover:bg-foreground/5 group"
+        >
+          <HardDrive className="w-5 h-5 text-muted-foreground group-hover:text-foreground" />
+          <div className="flex-1 text-left">
+            <span className="text-sm">{t.saveProgress}</span>
+            {lastSavedTime && (
+              <p className="text-xs text-muted-foreground">
+                {t.lastSaved}: {lastSavedTime.toLocaleTimeString()}
+              </p>
+            )}
+          </div>
+        </button>
+
+        {/* Clear Data - Only show if has saved data */}
+        {hasSavedData && (
+          <button
+            onClick={onClearData}
+            className="w-full flex items-center gap-4 px-3 py-2.5 rounded-full transition-colors hover:bg-red-500/10 text-muted-foreground hover:text-red-500"
+          >
+            <span className="w-5 h-5 flex items-center justify-center text-xs">×</span>
+            <span className="text-sm">{t.clearProgress}</span>
+          </button>
+        )}
+
+        {/* Divider */}
+        <div className="my-2 mx-3 border-t border-border/50" />
+
         {/* Theme Toggle */}
         <button
           onClick={(e) => onThemeToggle(e)}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-muted-foreground hover:bg-secondary/50 hover:text-foreground transition-all"
+          className="w-full flex items-center gap-4 px-3 py-2.5 rounded-full transition-colors hover:bg-foreground/5"
         >
           <AnimatePresence mode="wait">
             {isDarkMode ? (
@@ -188,9 +197,9 @@ export function Sidebar({
                 initial={{ rotate: -90, opacity: 0 }}
                 animate={{ rotate: 0, opacity: 1 }}
                 exit={{ rotate: 90, opacity: 0 }}
-                transition={{ duration: 0.2 }}
+                transition={{ duration: 0.15 }}
               >
-                <Moon className="w-6 h-6" />
+                <Moon className="w-5 h-5 text-muted-foreground" />
               </motion.div>
             ) : (
               <motion.div
@@ -198,34 +207,29 @@ export function Sidebar({
                 initial={{ rotate: 90, opacity: 0 }}
                 animate={{ rotate: 0, opacity: 1 }}
                 exit={{ rotate: -90, opacity: 0 }}
-                transition={{ duration: 0.2 }}
+                transition={{ duration: 0.15 }}
               >
-                <Sun className="w-6 h-6" />
+                <Sun className="w-5 h-5 text-muted-foreground" />
               </motion.div>
             )}
           </AnimatePresence>
-          <span className="text-base font-medium">
-            {isDarkMode ? t.darkMode : t.lightMode}
-          </span>
+          <span className="text-sm text-muted-foreground">{isDarkMode ? t.darkMode : t.lightMode}</span>
         </button>
         
         {/* Language Switch */}
         <button
           onClick={onLanguageSwitch}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-muted-foreground hover:bg-secondary/50 hover:text-foreground transition-all"
+          className="w-full flex items-center gap-4 px-3 py-2.5 rounded-full transition-colors hover:bg-foreground/5"
         >
-          <Globe className="w-6 h-6" />
-          <span className="text-base font-medium">{t.switchLanguage}</span>
+          <Globe className="w-5 h-5 text-muted-foreground" />
+          <span className="text-sm text-muted-foreground">{t.switchLanguage}</span>
         </button>
-        <p className="text-xs text-muted-foreground/60 px-4 mt-1">
-          {t.languageWarning}
-        </p>
       </div>
 
-      {/* Disclaimer */}
-      <div className="pt-6 border-t border-border">
-        <p className="text-xs text-muted-foreground leading-relaxed">
-          {t.disclaimer}
+      {/* Copyright */}
+      <div className="px-3 pt-3 mt-2 border-t border-border/50">
+        <p className="text-xs text-muted-foreground/50">
+          © 2024 Chengze Wu
         </p>
       </div>
     </aside>
