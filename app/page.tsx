@@ -31,6 +31,9 @@ import { StoryModeView } from "@/components/story-mode-view"
 import { useLocalStorage } from "@/hooks/use-local-storage"
 import { ScreenEffects, useScreenShake } from "@/components/screen-effects"
 import { IdleOverlay } from "@/components/idle-overlay"
+import { MobileNav } from "@/components/mobile-nav"
+import { MobileHeader } from "@/components/mobile-header"
+import { useTabVisibility } from "@/hooks/use-tab-visibility"
 import { SentimentAnalysis } from "@/components/sentiment-analysis"
 import { useSoundEffects } from "@/hooks/use-sound-effects"
 import type { Post, Comment, AICommentResponse, AccountStats, DirectMessage, BlockedUser, Achievement, Poll, StoryScenario, Mention } from "@/lib/types"
@@ -234,6 +237,9 @@ export default function EchoChamberPage() {
   const { playSound } = useSoundEffects(soundEnabled)
   const { triggerShake } = useScreenShake()
   const { isLoaded, hasSavedData, saveSession, loadSession, clearSession, getSavedTime } = useLocalStorage()
+  
+  // Tab visibility for retention messages
+  useTabVisibility(lang)
 
   const t = translations[lang]
   const accountStats = calculateAccountStats(posts, sentiment, totalNegativeComments, contentSentimentBonus)
@@ -365,11 +371,11 @@ export default function EchoChamberPage() {
       if (isPaused) return
       const dmContents = lang === "zh" ? [
         { content: "你好，能认识一下吗？", personality: "stan" as const },
-        { content: "看了你的帖子，我觉得你说得很有道理", personality: "normal" as const },
+        { content: "看了你���帖子，我觉得你说得很有道理", personality: "normal" as const },
         { content: "你是不是有病啊？发这种东西", personality: "hater" as const },
         { content: "我是你的粉丝，能加个好友吗？", personality: "stan" as const },
         { content: "我代表正义来审判你", personality: "moral-knight" as const },
-        { content: "加���信吗？有事商量", personality: "spam-bot" as const },
+        { content: "加�����信吗？有事商量", personality: "spam-bot" as const },
       ] : [
         { content: "Hey, can we chat?", personality: "stan" as const },
         { content: "Saw your post, you make a good point", personality: "normal" as const },
@@ -1336,8 +1342,19 @@ export default function EchoChamberPage() {
 
       <ScrollToTop />
 
-      {/* Sidebar */}
-      <div className="fixed left-0 top-0 h-screen">
+      {/* Mobile Header */}
+      <MobileHeader
+        lang={lang}
+        t={t}
+        isDarkMode={isDarkMode}
+        onThemeToggle={handleThemeToggle}
+        onLanguageSwitch={handleLanguageSwitchClick}
+        dayCount={dayCount}
+        sentiment={sentiment}
+      />
+
+      {/* Sidebar - Desktop Only */}
+      <div className="hidden lg:block fixed left-0 top-0 h-screen">
         <Sidebar 
           notificationCount={notificationCount}
           dmCount={directMessages.filter(m => !m.isRead).length}
@@ -1360,8 +1377,8 @@ export default function EchoChamberPage() {
       </div>
 
       {/* Main Content */}
-      <main className="ml-64 mr-80">
-        <div className="max-w-2xl mx-auto py-6 px-4">
+      <main className="pb-20 lg:pb-0 lg:ml-56 xl:ml-64 lg:mr-72 xl:mr-80">
+        <div className="max-w-2xl mx-auto py-4 lg:py-6 px-3 lg:px-4">
           <motion.h1 
             className="text-xl font-bold text-foreground mb-6"
             initial={{ opacity: 0, y: -20 }}
@@ -1569,8 +1586,8 @@ export default function EchoChamberPage() {
       </main>
 
       {/* Right Sidebar */}
-      <aside className="fixed right-0 top-0 h-screen w-80 border-l border-border overflow-y-auto">
-        <div className="p-6 space-y-6">
+      <aside className="hidden lg:block fixed right-0 top-0 h-screen w-72 xl:w-80 border-l border-border overflow-y-auto bg-card">
+        <div className="p-4 xl:p-6 space-y-4 xl:space-y-6">
           <SentimentWidget sentiment={sentiment} trend={sentimentTrend} t={t} />
           <AccountWidget stats={accountStats} t={t} />
           <SentimentAnalysis
@@ -1787,6 +1804,19 @@ export default function EchoChamberPage() {
         onIdle={() => setIsPaused(true)}
         lang={lang}
         t={t}
+      />
+
+      {/* Mobile Bottom Navigation */}
+      <MobileNav
+        notificationCount={notificationCount}
+        dmCount={directMessages.filter(m => !m.isRead).length}
+        onNavClick={handleNavClick}
+        activeNav={activeNav}
+        lang={lang}
+        t={t}
+        onOpenDM={() => setShowDMPanel(true)}
+        onOpenAchievements={() => setShowAchievementsPanel(true)}
+        onOpenStoryMode={() => setShowStoryModePanel(true)}
       />
     </div>
   )

@@ -9,6 +9,7 @@ export const translations = {
     messages: "私信",
     achievements: "成就",
     storyMode: "剧情模式",
+    more: "更多",
     
     // Post box
     postPlaceholder: "在想什么？发条动态试试...",
@@ -223,6 +224,7 @@ export const translations = {
     messages: "Messages",
     achievements: "Achievements",
     storyMode: "Story Mode",
+    more: "More",
     
     // Post box
     postPlaceholder: "What's on your mind? Share something...",
