@@ -94,6 +94,7 @@ export interface AchievementCheckStats {
   firstFlamed: boolean
   sentimentCrashed: boolean
   sentimentRecovered: boolean
+  stubbornMobile: boolean
 }
 
 // 拉黑用户
@@ -446,6 +447,16 @@ export const ACHIEVEMENTS: Achievement[] = [
     descEn: "Recovered from 3 PR crises",
     icon: "🔥",
     condition: (s) => s.sentimentRecovered && s.totalNegativeComments >= 30
+  },
+  // 特殊彩蛋成就
+  {
+    id: "stubborn_mobile",
+    titleZh: "你是真的倔",
+    titleEn: "Stubborn as a Mule",
+    descZh: "在小屏幕上坚持要进入网站",
+    descEn: "Insisted on entering the site on a small screen",
+    icon: "🫏",
+    condition: (s) => s.stubbornMobile
   },
 ]
 

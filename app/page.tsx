@@ -231,6 +231,7 @@ export default function EchoChamberPage() {
   const [firstFlamed, setFirstFlamed] = useState(false)
   const [sentimentCrashed, setSentimentCrashed] = useState(false)
   const [sentimentRecovered, setSentimentRecovered] = useState(false)
+  const [stubbornMobile, setStubbornMobile] = useState(false)
   
   const otherPostTimerRef = useRef<NodeJS.Timeout | null>(null)
   const { playSound } = useSoundEffects(soundEnabled)
@@ -429,7 +430,8 @@ export default function EchoChamberPage() {
       daysActive: dayCount,
       firstFlamed,
       sentimentCrashed,
-      sentimentRecovered
+      sentimentRecovered,
+      stubbornMobile
     }
 
     const unlockedIds = new Set(unlockedAchievements.map(a => a.id))
@@ -446,7 +448,7 @@ export default function EchoChamberPage() {
         break // Only unlock one at a time
       }
     }
-  }, [posts, totalNegativeComments, sentiment, accountStats, blockedUsers, reportedComments, dayCount, firstFlamed, sentimentCrashed, sentimentRecovered, unlockedAchievements, playSound])
+  }, [posts, totalNegativeComments, sentiment, accountStats, blockedUsers, reportedComments, dayCount, firstFlamed, sentimentCrashed, sentimentRecovered, stubbornMobile, unlockedAchievements, playSound])
 
   // Day counter - increments with each post
   useEffect(() => {
@@ -1329,8 +1331,12 @@ export default function EchoChamberPage() {
     new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
   )
 
+  const handleStubbornUnlock = () => {
+    setStubbornMobile(true)
+  }
+
   return (
-    <ScreenSizeGuard lang={lang} t={t}>
+    <ScreenSizeGuard lang={lang} t={t} onStubbornUnlock={handleStubbornUnlock}>
       <div className={`min-h-screen transition-all duration-500 ${
         isLowSentiment ? "grayscale-[30%]" : ""
       }`}>
