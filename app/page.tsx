@@ -593,6 +593,18 @@ export default function EchoChamberPage() {
     setTopicPosts([])
     setTopicPostsCache({})
     setOtherUserPosts([])
+    setDirectMessages([])
+    setDayCount(1)
+    setAccountStats({
+      followers: 0,
+      haters: 0,
+      reputation: 50,
+      controversy: 0,
+      influence: 0,
+      totalLikes: 0
+    })
+    setUnlockedAchievements([])
+    setStoryTasks(prev => prev.map(task => ({ ...task, completed: false, progress: 0 })))
     // Load cached topics for new language
     const cachedTopics = getRandomTopics(newLang, 5)
     setTrendingTopics(cachedTopics.map(t => ({ tag: t.tag, count: t.count, hot: t.hot })))
