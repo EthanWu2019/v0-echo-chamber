@@ -372,7 +372,7 @@ export default function EchoChamberPage() {
       const dmContents = lang === "zh" ? [
         { content: "你好，能认识一下吗？", personality: "stan" as const },
         { content: "看了你���帖子，我觉得你说得很有道理", personality: "normal" as const },
-        { content: "你是不是有病啊？发这种东西", personality: "hater" as const },
+        { content: "你是不是有病啊？���这种东西", personality: "hater" as const },
         { content: "我是你的粉丝，能加个好友吗？", personality: "stan" as const },
         { content: "我代表正义来审判你", personality: "moral-knight" as const },
         { content: "加�����信吗？有事商量", personality: "spam-bot" as const },
@@ -1384,8 +1384,8 @@ export default function EchoChamberPage() {
       </div>
 
       {/* Main Content */}
-      <main className="ml-[275px] mr-[350px]">
-        <div className="max-w-[600px] mx-auto border-x border-border min-h-screen">
+      <main className="ml-[275px] mr-[350px] h-screen overflow-y-auto">
+        <div className="max-w-[600px] mx-auto border-x border-border min-h-full">
           {/* Sticky Header */}
           <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border px-4 py-3">
             <motion.h1 
@@ -1596,8 +1596,8 @@ export default function EchoChamberPage() {
       </main>
 
       {/* Right Sidebar */}
-      <aside className="fixed right-0 top-0 h-screen w-[350px] border-l border-border overflow-y-auto bg-background">
-        <div className="p-5 space-y-5">
+      <aside className="fixed right-0 top-0 h-screen w-[350px] border-l border-border overflow-y-auto bg-background py-5">
+        <div className="px-5 space-y-5">
           <SentimentWidget sentiment={sentiment} trend={sentimentTrend} t={t} />
           <AccountWidget stats={accountStats} t={t} />
           <SentimentAnalysis
