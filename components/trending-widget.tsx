@@ -1,7 +1,7 @@
 "use client"
 
 import { motion } from "framer-motion"
-import { TrendingUp, Flame, ChevronRight, Loader2 } from "lucide-react"
+import { TrendingUp, ChevronRight, Loader2 } from "lucide-react"
 import type { Translations, Language } from "@/lib/i18n"
 
 export interface TrendingTopic {
@@ -27,13 +27,13 @@ export function TrendingWidget({
   isLoadingMore 
 }: TrendingWidgetProps) {
   return (
-    <div className="bg-card border border-border rounded-2xl p-4">
+    <div className="bg-secondary/30 rounded-xl p-4">
       <div className="flex items-center gap-2 mb-4">
-        <TrendingUp className="w-5 h-5 text-orange-400" />
+        <TrendingUp className="w-5 h-5 text-primary" />
         <h3 className="font-semibold text-foreground">{t.trendingTopics}</h3>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-1">
         {topics.map((topic, index) => (
           <motion.button
             key={`${topic.tag}-${index}`}
@@ -41,9 +41,9 @@ export function TrendingWidget({
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: index * 0.05 }}
             onClick={() => onTopicClick(topic)}
-            className="w-full flex items-center gap-3 group text-left p-2 rounded-lg hover:bg-secondary/50 transition-colors"
+            className="w-full flex items-center gap-3 group text-left p-2 rounded-lg hover:bg-foreground/5 transition-colors"
           >
-            <span className="text-sm font-medium text-muted-foreground w-5 shrink-0">
+            <span className="text-sm text-muted-foreground w-5 shrink-0">
               {index + 1}
             </span>
             <div className="flex-1 min-w-0">
@@ -52,7 +52,7 @@ export function TrendingWidget({
                   #{topic.tag}
                 </span>
                 {topic.hot && (
-                  <Flame className="w-3 h-3 text-orange-500 shrink-0" />
+                  <span className="w-1.5 h-1.5 bg-primary rounded-full shrink-0" />
                 )}
               </div>
               <span className="text-xs text-muted-foreground">

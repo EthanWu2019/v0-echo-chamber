@@ -47,7 +47,7 @@ export function Sidebar({
   return (
     <aside className="fixed left-0 top-0 h-screen w-[275px] border-r border-border bg-background px-3 py-4 flex flex-col">
       {/* Logo */}
-      <div className="px-3 mb-2">
+      <div className="px-3 mb-8">
         <div className="flex items-center gap-2.5 py-2">
           <div className="relative">
             <Radio className="w-7 h-7 text-primary" />
@@ -68,8 +68,8 @@ export function Sidebar({
           onClick={() => onNavClick?.(t.home)}
           className={`w-full flex items-center gap-4 px-3 py-3 rounded-full transition-colors
             ${activeNav === t.home 
-              ? "font-bold" 
-              : "font-normal hover:bg-foreground/5"
+              ? "bg-foreground/10 font-semibold" 
+              : "hover:bg-foreground/5"
             }`}
         >
           <Home className={`w-[26px] h-[26px] ${activeNav === t.home ? "stroke-[2.5]" : ""}`} />
@@ -81,14 +81,14 @@ export function Sidebar({
           onClick={() => onNavClick?.(t.notifications)}
           className={`w-full flex items-center gap-4 px-3 py-3 rounded-full transition-colors
             ${activeNav === t.notifications 
-              ? "font-bold" 
-              : "font-normal hover:bg-foreground/5"
+              ? "bg-foreground/10 font-semibold" 
+              : "hover:bg-foreground/5"
             }`}
         >
-          <div className="relative">
+          <div className="relative w-[26px] h-[26px]">
             <Bell className={`w-[26px] h-[26px] ${activeNav === t.notifications ? "stroke-[2.5]" : ""}`} />
             {notificationCount > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-primary text-primary-foreground text-[11px] font-bold rounded-full flex items-center justify-center px-1">
+              <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] bg-primary text-primary-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
                 {notificationCount > 99 ? "99+" : notificationCount}
               </span>
             )}
@@ -101,10 +101,10 @@ export function Sidebar({
           onClick={onOpenDM}
           className="w-full flex items-center gap-4 px-3 py-3 rounded-full transition-colors hover:bg-foreground/5"
         >
-          <div className="relative">
+          <div className="relative w-[26px] h-[26px]">
             <Mail className="w-[26px] h-[26px]" />
             {dmCount > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-primary text-primary-foreground text-[11px] font-bold rounded-full flex items-center justify-center px-1">
+              <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] bg-primary text-primary-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
                 {dmCount > 99 ? "99+" : dmCount}
               </span>
             )}
@@ -117,8 +117,8 @@ export function Sidebar({
           onClick={() => onNavClick?.(t.profile)}
           className={`w-full flex items-center gap-4 px-3 py-3 rounded-full transition-colors
             ${activeNav === t.profile 
-              ? "font-bold" 
-              : "font-normal hover:bg-foreground/5"
+              ? "bg-foreground/10 font-semibold" 
+              : "hover:bg-foreground/5"
             }`}
         >
           <User className={`w-[26px] h-[26px] ${activeNav === t.profile ? "stroke-[2.5]" : ""}`} />
@@ -226,10 +226,10 @@ export function Sidebar({
         </button>
       </div>
 
-      {/* Disclaimer */}
+      {/* Copyright */}
       <div className="px-3 pt-3 mt-2 border-t border-border/50">
-        <p className="text-xs text-muted-foreground/50 leading-relaxed">
-          {t.disclaimer}
+        <p className="text-xs text-muted-foreground/50">
+          © 2024 Chengze Wu
         </p>
       </div>
     </aside>

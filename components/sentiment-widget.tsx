@@ -12,9 +12,9 @@ interface SentimentWidgetProps {
 
 export function SentimentWidget({ sentiment, trend, t }: SentimentWidgetProps) {
   const getColor = () => {
-    if (sentiment >= 70) return { bar: "from-green-500 to-emerald-500", text: "text-green-400", bg: "bg-green-500/20" }
-    if (sentiment >= 40) return { bar: "from-yellow-500 to-orange-500", text: "text-yellow-400", bg: "bg-yellow-500/20" }
-    return { bar: "from-red-500 to-rose-600", text: "text-red-400", bg: "bg-red-500/20" }
+    if (sentiment >= 70) return { bar: "bg-primary", text: "text-primary", bg: "bg-primary/10" }
+    if (sentiment >= 40) return { bar: "bg-muted-foreground", text: "text-muted-foreground", bg: "bg-muted" }
+    return { bar: "bg-destructive", text: "text-destructive", bg: "bg-destructive/10" }
   }
 
   const getStatusText = () => {
@@ -27,8 +27,8 @@ export function SentimentWidget({ sentiment, trend, t }: SentimentWidgetProps) {
   const isLow = sentiment < 30
 
   return (
-    <div className={`bg-card border rounded-2xl p-4 transition-colors ${
-      isLow ? "border-red-500/50" : "border-border"
+    <div className={`bg-secondary/30 rounded-xl p-4 transition-colors ${
+      isLow ? "ring-1 ring-destructive/30" : ""
     }`}>
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-semibold text-foreground flex items-center gap-2">
@@ -38,7 +38,7 @@ export function SentimentWidget({ sentiment, trend, t }: SentimentWidgetProps) {
               animate={{ scale: [1, 1.1, 1] }}
               transition={{ duration: 0.5, repeat: Infinity }}
             >
-              <AlertCircle className="w-4 h-4 text-red-500" />
+              <AlertCircle className="w-4 h-4 text-destructive" />
             </motion.div>
           )}
         </h3>
@@ -50,9 +50,9 @@ export function SentimentWidget({ sentiment, trend, t }: SentimentWidgetProps) {
       </div>
 
       {/* Progress Bar */}
-      <div className="relative h-4 bg-secondary rounded-full overflow-hidden">
+      <div className="relative h-2 bg-secondary rounded-full overflow-hidden">
         <motion.div
-          className={`absolute inset-y-0 left-0 bg-gradient-to-r ${color.bar} rounded-full`}
+          className={`absolute inset-y-0 left-0 ${color.bar} rounded-full`}
           initial={{ width: "50%" }}
           animate={{ 
             width: `${sentiment}%`,
@@ -66,7 +66,7 @@ export function SentimentWidget({ sentiment, trend, t }: SentimentWidgetProps) {
         {/* Glow effect for low sentiment */}
         {isLow && (
           <motion.div
-            className="absolute inset-0 bg-red-500/30 rounded-full"
+            className="absolute inset-0 bg-destructive/30 rounded-full"
             animate={{ opacity: [0.3, 0.6, 0.3] }}
             transition={{ duration: 1, repeat: Infinity }}
           />
@@ -88,9 +88,9 @@ export function SentimentWidget({ sentiment, trend, t }: SentimentWidgetProps) {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mt-3 px-3 py-2 bg-red-500/10 border border-red-500/30 rounded-lg"
+          className="mt-3 px-3 py-2 bg-destructive/10 border border-destructive/20 rounded-lg"
         >
-          <p className="text-xs text-red-400">
+          <p className="text-xs text-destructive">
             {t.sentimentWarning}
           </p>
         </motion.div>

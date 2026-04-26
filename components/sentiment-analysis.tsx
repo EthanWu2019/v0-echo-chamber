@@ -27,7 +27,7 @@ export function SentimentAnalysis({
   const maxWordCount = Math.max(...hotWords.map(w => w.count), 1)
 
   return (
-    <div className="bg-card border border-border rounded-2xl p-4 space-y-6">
+    <div className="bg-secondary/30 rounded-xl p-4 space-y-6">
       <div className="flex items-center gap-2">
         <BarChart3 className="w-5 h-5 text-primary" />
         <h3 className="font-semibold">{t.sentimentAnalysis}</h3>
@@ -38,24 +38,24 @@ export function SentimentAnalysis({
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm text-muted-foreground">{t.sentimentTrend}</span>
           <div className="flex items-center gap-1">
-            {trend === "up" && <TrendingUp className="w-4 h-4 text-green-400" />}
-            {trend === "down" && <TrendingDown className="w-4 h-4 text-red-400" />}
+            {trend === "up" && <TrendingUp className="w-4 h-4 text-primary" />}
+            {trend === "down" && <TrendingDown className="w-4 h-4 text-muted-foreground" />}
             {trend === "stable" && <Minus className="w-4 h-4 text-muted-foreground" />}
             <span className={`text-sm font-medium ${
-              trend === "up" ? "text-green-400" : trend === "down" ? "text-red-400" : "text-muted-foreground"
+              trend === "up" ? "text-primary" : "text-muted-foreground"
             }`}>
               {currentSentiment}%
             </span>
           </div>
         </div>
-        <div className="h-20 flex items-end gap-1">
+        <div className="h-16 flex items-end gap-1">
           {sentimentHistory.slice(-12).map((value, i) => (
             <motion.div
               key={i}
               initial={{ height: 0 }}
               animate={{ height: `${value}%` }}
               className={`flex-1 rounded-t transition-colors ${
-                value >= 70 ? "bg-green-500/60" : value >= 40 ? "bg-yellow-500/60" : "bg-red-500/60"
+                value >= 50 ? "bg-primary/60" : "bg-muted-foreground/40"
               }`}
             />
           ))}
@@ -77,9 +77,9 @@ export function SentimentAnalysis({
                 style={{ fontSize: `${size}rem` }}
                 className={`px-2 py-1 rounded-full ${
                   item.sentiment === "positive" 
-                    ? "bg-green-500/20 text-green-400" 
+                    ? "bg-primary/15 text-primary" 
                     : item.sentiment === "negative"
-                    ? "bg-red-500/20 text-red-400"
+                    ? "bg-muted text-muted-foreground"
                     : "bg-secondary text-muted-foreground"
                 }`}
               >
@@ -93,13 +93,13 @@ export function SentimentAnalysis({
       {/* Heat Curve */}
       <div>
         <span className="text-sm text-muted-foreground block mb-2">{t.heatCurve}</span>
-        <div className="h-16 flex items-end gap-0.5">
+        <div className="h-12 flex items-end gap-0.5">
           {heatHistory.slice(-20).map((value, i) => (
             <motion.div
               key={i}
               initial={{ height: 0 }}
               animate={{ height: `${(value / maxHeat) * 100}%` }}
-              className="flex-1 bg-gradient-to-t from-orange-500/60 to-red-500/60 rounded-t"
+              className="flex-1 bg-primary/50 rounded-t"
             />
           ))}
         </div>
