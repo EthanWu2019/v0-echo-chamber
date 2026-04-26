@@ -38,11 +38,11 @@ export function SentimentAnalysis({
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm text-muted-foreground">{t.sentimentTrend}</span>
           <div className="flex items-center gap-1">
-            {trend === "up" && <TrendingUp className="w-4 h-4 text-primary" />}
-            {trend === "down" && <TrendingDown className="w-4 h-4 text-muted-foreground" />}
+            {trend === "up" && <TrendingUp className="w-4 h-4 text-accent" />}
+            {trend === "down" && <TrendingDown className="w-4 h-4 text-destructive" />}
             {trend === "stable" && <Minus className="w-4 h-4 text-muted-foreground" />}
             <span className={`text-sm font-medium ${
-              trend === "up" ? "text-primary" : "text-muted-foreground"
+              trend === "up" ? "text-accent" : trend === "down" ? "text-destructive" : "text-muted-foreground"
             }`}>
               {currentSentiment}%
             </span>
@@ -55,7 +55,7 @@ export function SentimentAnalysis({
               initial={{ height: 0 }}
               animate={{ height: `${value}%` }}
               className={`flex-1 rounded-t transition-colors ${
-                value >= 50 ? "bg-primary/60" : "bg-muted-foreground/40"
+                value >= 60 ? "bg-accent/70" : value >= 40 ? "bg-primary/60" : "bg-destructive/50"
               }`}
             />
           ))}
@@ -77,9 +77,9 @@ export function SentimentAnalysis({
                 style={{ fontSize: `${size}rem` }}
                 className={`px-2 py-1 rounded-full ${
                   item.sentiment === "positive" 
-                    ? "bg-primary/15 text-primary" 
+                    ? "bg-accent/15 text-accent" 
                     : item.sentiment === "negative"
-                    ? "bg-muted text-muted-foreground"
+                    ? "bg-destructive/15 text-destructive"
                     : "bg-secondary text-muted-foreground"
                 }`}
               >
@@ -94,14 +94,19 @@ export function SentimentAnalysis({
       <div>
         <span className="text-sm text-muted-foreground block mb-2">{t.heatCurve}</span>
         <div className="h-12 flex items-end gap-0.5">
-          {heatHistory.slice(-20).map((value, i) => (
-            <motion.div
-              key={i}
-              initial={{ height: 0 }}
-              animate={{ height: `${(value / maxHeat) * 100}%` }}
-              className="flex-1 bg-primary/50 rounded-t"
-            />
-          ))}
+          {heatHistory.slice(-20).map((value, i) => {
+            const intensity = value / maxHeat
+            return (
+              <motion.div
+                key={i}
+                initial={{ height: 0 }}
+                animate={{ height: `${intensity * 100}%` }}
+                className={`flex-1 rounded-t ${
+                  intensity > 0.7 ? "bg-accent/70" : intensity > 0.4 ? "bg-primary/60" : "bg-primary/30"
+                }`}
+              />
+            )
+          })}
         </div>
       </div>
     </div>

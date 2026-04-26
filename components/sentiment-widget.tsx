@@ -12,8 +12,8 @@ interface SentimentWidgetProps {
 
 export function SentimentWidget({ sentiment, trend, t }: SentimentWidgetProps) {
   const getColor = () => {
-    if (sentiment >= 70) return { bar: "bg-primary", text: "text-primary", bg: "bg-primary/10" }
-    if (sentiment >= 40) return { bar: "bg-muted-foreground", text: "text-muted-foreground", bg: "bg-muted" }
+    if (sentiment >= 70) return { bar: "bg-accent", text: "text-accent", bg: "bg-accent/10" }
+    if (sentiment >= 40) return { bar: "bg-primary", text: "text-primary", bg: "bg-primary/10" }
     return { bar: "bg-destructive", text: "text-destructive", bg: "bg-destructive/10" }
   }
 

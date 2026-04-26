@@ -12,9 +12,15 @@ interface AccountWidgetProps {
 
 export function AccountWidget({ stats, t }: AccountWidgetProps) {
   const getControversyLabel = () => {
-    if (stats.controversy >= 70) return { label: t.controversyHigh, color: "text-foreground", bg: "bg-foreground/10" }
-    if (stats.controversy >= 40) return { label: t.controversyMid, color: "text-muted-foreground", bg: "bg-muted" }
-    return { label: t.controversyLow, color: "text-muted-foreground", bg: "bg-muted" }
+    if (stats.controversy >= 70) return { label: t.controversyHigh, color: "text-destructive", bg: "bg-destructive/10" }
+    if (stats.controversy >= 40) return { label: t.controversyMid, color: "text-primary", bg: "bg-primary/10" }
+    return { label: t.controversyLow, color: "text-accent", bg: "bg-accent/10" }
+  }
+  
+  const getReputationColor = () => {
+    if (stats.reputation >= 70) return "bg-accent"
+    if (stats.reputation >= 40) return "bg-primary"
+    return "bg-destructive"
   }
 
   const controversy = getControversyLabel()
@@ -71,7 +77,7 @@ export function AccountWidget({ stats, t }: AccountWidgetProps) {
           </div>
           <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
             <motion.div
-              className="h-full rounded-full bg-primary"
+              className={`h-full rounded-full ${getReputationColor()}`}
               initial={{ width: 0 }}
               animate={{ width: `${stats.reputation}%` }}
               transition={{ duration: 0.5 }}
@@ -92,7 +98,9 @@ export function AccountWidget({ stats, t }: AccountWidgetProps) {
           </div>
           <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
             <motion.div
-              className="h-full rounded-full bg-muted-foreground"
+              className={`h-full rounded-full ${
+                stats.controversy >= 70 ? "bg-destructive" : stats.controversy >= 40 ? "bg-primary" : "bg-accent"
+              }`}
               initial={{ width: 0 }}
               animate={{ width: `${stats.controversy}%` }}
               transition={{ duration: 0.5 }}
@@ -107,11 +115,11 @@ export function AccountWidget({ stats, t }: AccountWidgetProps) {
               <TrendingUp className="w-3 h-3" />
               {t.influence}
             </span>
-            <span className="text-primary">{stats.influence}%</span>
+            <span className="text-accent">{stats.influence}%</span>
           </div>
           <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
             <motion.div
-              className="h-full rounded-full bg-primary"
+              className="h-full rounded-full bg-accent"
               initial={{ width: 0 }}
               animate={{ width: `${stats.influence}%` }}
               transition={{ duration: 0.5 }}
