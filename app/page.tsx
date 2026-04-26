@@ -1574,7 +1574,6 @@ export default function EchoChamberPage() {
               </div>
             </div>
           )}
-          </div>
         </div>
       </main>
 
