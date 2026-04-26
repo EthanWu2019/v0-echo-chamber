@@ -88,8 +88,8 @@ export function PostBox({ onPost, isLoading, reviewProgress = 0, reviewPhase = "
     <div className="border-b border-border px-4 py-3">
       {/* Input Area */}
       <div className="flex gap-3">
-        <div className="w-10 h-10 rounded-full bg-primary shrink-0 flex items-center justify-center">
-          <span className="text-primary-foreground font-semibold text-sm">U</span>
+        <div className="w-10 h-10 rounded-full shrink-0 overflow-hidden">
+          <img src="/favicon.png" alt="User" className="w-full h-full object-cover" />
         </div>
         <div className="flex-1">
           <textarea

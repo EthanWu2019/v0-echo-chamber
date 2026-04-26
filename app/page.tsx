@@ -1512,8 +1512,8 @@ export default function EchoChamberPage() {
             <div className="space-y-6">
               <div className="bg-card border border-border rounded-2xl p-6">
                 <div className="flex items-center gap-4">
-                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
-                    <span className="text-white text-2xl font-bold">U</span>
+                  <div className="w-20 h-20 rounded-full overflow-hidden">
+                    <img src="/favicon.png" alt="User" className="w-full h-full object-cover" />
                   </div>
                   <div>
                     <h2 className="text-xl font-bold text-foreground">{t.simulatedUser}</h2>
