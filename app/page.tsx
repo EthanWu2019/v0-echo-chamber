@@ -31,8 +31,7 @@ import { StoryModeView } from "@/components/story-mode-view"
 import { useLocalStorage } from "@/hooks/use-local-storage"
 import { ScreenEffects, useScreenShake } from "@/components/screen-effects"
 import { IdleOverlay } from "@/components/idle-overlay"
-import { MobileNav } from "@/components/mobile-nav"
-import { MobileHeader } from "@/components/mobile-header"
+import { ScreenSizeGuard } from "@/components/screen-size-guard"
 import { useTabVisibility } from "@/hooks/use-tab-visibility"
 import { SentimentAnalysis } from "@/components/sentiment-analysis"
 import { useSoundEffects } from "@/hooks/use-sound-effects"
@@ -1319,10 +1318,11 @@ export default function EchoChamberPage() {
   )
 
   return (
-    <div className={`min-h-screen transition-all duration-500 ${
-      isLowSentiment ? "grayscale-[30%]" : ""
-    }`}>
-      {/* Low sentiment effect */}
+    <ScreenSizeGuard lang={lang} t={t}>
+      <div className={`min-h-screen transition-all duration-500 ${
+        isLowSentiment ? "grayscale-[30%]" : ""
+      }`}>
+        {/* Low sentiment effect */}
       <AnimatePresence>
         {isLowSentiment && (
           <motion.div
@@ -1342,19 +1342,8 @@ export default function EchoChamberPage() {
 
       <ScrollToTop />
 
-      {/* Mobile Header */}
-      <MobileHeader
-        lang={lang}
-        t={t}
-        isDarkMode={isDarkMode}
-        onThemeToggle={handleThemeToggle}
-        onLanguageSwitch={handleLanguageSwitchClick}
-        dayCount={dayCount}
-        sentiment={sentiment}
-      />
-
-      {/* Sidebar - Desktop Only */}
-      <div className="hidden lg:block fixed left-0 top-0 h-screen">
+      {/* Sidebar */}
+      <div className="fixed left-0 top-0 h-screen">
         <Sidebar 
           notificationCount={notificationCount}
           dmCount={directMessages.filter(m => !m.isRead).length}
@@ -1377,16 +1366,19 @@ export default function EchoChamberPage() {
       </div>
 
       {/* Main Content */}
-      <main className="pb-20 lg:pb-0 lg:ml-56 xl:ml-64 lg:mr-72 xl:mr-80">
-        <div className="max-w-2xl mx-auto py-4 lg:py-6 px-3 lg:px-4">
-          <motion.h1 
-            className="text-xl font-bold text-foreground mb-6"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            key={activeNav + (selectedTopic?.tag || "")}
-          >
-            {selectedTopic ? `#${selectedTopic.tag}` : activeNav}
-          </motion.h1>
+      <main className="ml-[275px] mr-[350px]">
+        <div className="max-w-[600px] mx-auto border-x border-border min-h-screen">
+          {/* Sticky Header */}
+          <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border px-4 py-3">
+            <motion.h1 
+              className="text-xl font-bold text-foreground"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              key={activeNav + (selectedTopic?.tag || "")}
+            >
+              {selectedTopic ? `#${selectedTopic.tag}` : activeNav}
+            </motion.h1>
+          </div>
 
           {/* Topic View */}
           {selectedTopic && (
@@ -1582,12 +1574,13 @@ export default function EchoChamberPage() {
               </div>
             </div>
           )}
+          </div>
         </div>
       </main>
 
       {/* Right Sidebar */}
-      <aside className="hidden lg:block fixed right-0 top-0 h-screen w-72 xl:w-80 border-l border-border overflow-y-auto bg-card">
-        <div className="p-4 xl:p-6 space-y-4 xl:space-y-6">
+      <aside className="fixed right-0 top-0 h-screen w-[350px] border-l border-border overflow-y-auto bg-background">
+        <div className="p-5 space-y-5">
           <SentimentWidget sentiment={sentiment} trend={sentimentTrend} t={t} />
           <AccountWidget stats={accountStats} t={t} />
           <SentimentAnalysis
@@ -1806,18 +1799,7 @@ export default function EchoChamberPage() {
         t={t}
       />
 
-      {/* Mobile Bottom Navigation */}
-      <MobileNav
-        notificationCount={notificationCount}
-        dmCount={directMessages.filter(m => !m.isRead).length}
-        onNavClick={handleNavClick}
-        activeNav={activeNav}
-        lang={lang}
-        t={t}
-        onOpenDM={() => setShowDMPanel(true)}
-        onOpenAchievements={() => setShowAchievementsPanel(true)}
-        onOpenStoryMode={() => setShowStoryModePanel(true)}
-      />
-    </div>
+      </div>
+    </ScreenSizeGuard>
   )
 }
