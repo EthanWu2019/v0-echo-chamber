@@ -121,7 +121,40 @@
   }
   body {
     @apply bg-background text-foreground;
+    overflow: hidden;
   }
+}
+
+/* Custom scrollbar styles */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--muted-foreground) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: oklch(0.5 0 0 / 0.3);
+  border-radius: 3px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: oklch(0.5 0 0 / 0.5);
+}
+
+.dark *::-webkit-scrollbar-thumb {
+  background-color: oklch(0.7 0 0 / 0.3);
+}
+
+.dark *::-webkit-scrollbar-thumb:hover {
+  background-color: oklch(0.7 0 0 / 0.5);
 }
 
 /* View Transitions API - theme toggle circle reveal */
